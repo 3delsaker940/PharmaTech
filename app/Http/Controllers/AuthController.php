@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\Request;
 use App\Http\Requests\ResetPasswordRequest;
+use App\Http\Requests\CompleteRegistrationRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -26,9 +28,11 @@ class AuthController extends Controller
                     'password' => $request->password
                 ]);
                 $user->sendEmailVerificationNotification();
+                $token = $user->createToken('auth_token')->plainTextToken;
                 Log::info('User registered successfully', ['user_id' => $user->id]);
                 return response()->json([
-                    'message' => 'User registered successfully. Please check your email for verification link.'
+                    'message' => 'User registered successfully. Please check your email for verification link.',
+                    'token' => $token
                 ]);
             });
         } catch (\Exception $e) {
@@ -41,6 +45,80 @@ class AuthController extends Controller
         }
     }
 
+    public function completeRegistration(CompleteRegistrationRequest $request)
+    {
+        $user = $request->user();
+        $user->update([
+            'first_name' => $request->first_name,
+            'middle_name' => $request->middle_name,
+            'last_name' => $request->last_name,
+            'phone_number' => $request->phone_number
+        ]);
+        return response()->json(['message' => 'Registration completed successfully'], 200);
+    }
+    public function login(Request $request)
+    {
+        Log::info('Attempting user login', [
+            'email' => $request->email
+        ]);
+        try {
+            $request->validate([
+                'email' => 'required|email',
+                'password' => 'required'
+
+            ]);
+            if (!Auth::attempt($request->only('email', 'password'))) {
+                Log::warning('User login failed - invalid credentials', [
+                    'email' => $request->email
+                ]);
+                return response()->json([
+                    'message' => 'Invalid email or password'
+                ], 401);
+            }
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            if (!$user->hasVerifiedEmail()) {
+                Auth::logout();
+                return response()->json([
+                    'message' => 'Please verify your email first'
+                ], 403);
+            }
+
+            Log::info('User logged in successfully', [
+                'email' => $request->email
+            ]);
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+            return response()->json([
+                'message' => 'User logged in successfully',
+                'token' => $token
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Error during user login', [
+                'error_message' => $e->getMessage(),
+                'email' => $request->email
+            ]);
+            return response()->json([
+                'message' => "Something went wrong, please try again later."
+            ], 500);
+        }
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json([
+            'message' => 'user logged out successfully',
+        ], 200);
+    }
+
+    public function  logoutAll(Request $request)
+    {
+        $request->user()->tokens()->delete();
+        return response()->json([
+            'message' => 'user logged out from all sessions successfully',
+        ], 200);
+    }
 
     public function resetPassword(ResetPasswordRequest $request)
     {
@@ -75,6 +153,4 @@ class AuthController extends Controller
             ? response()->json(['message' => 'Reset link sent to your email!'], 200)
             : response()->json(['message' => __($status)], 400);
     }
-
-    
 }
