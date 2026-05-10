@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\Request;
 use App\Http\Requests\ResetPasswordRequest;
+use App\Http\Requests\CompleteRegistrationRequest;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +27,11 @@ class AuthController extends Controller
                     'password' => $request->password
                 ]);
                 $user->sendEmailVerificationNotification();
+                $token = $user->createToken('auth_token')->plainTextToken;
                 Log::info('User registered successfully', ['user_id' => $user->id]);
                 return response()->json([
-                    'message' => 'User registered successfully. Please check your email for verification link.'
+                    'message' => 'User registered successfully. Please check your email for verification link.',
+                    'token' => $token
                 ]);
             });
         } catch (\Exception $e) {
@@ -41,6 +44,17 @@ class AuthController extends Controller
         }
     }
 
+    public function completeRegistration(CompleteRegistrationRequest $request)
+    {
+        $user = $request->user();
+        $user->update([
+            'first_name' => $request->first_name,
+            'middle_name' => $request->middle_name,
+            'last_name' => $request->last_name,
+            'phone_number' => $request->phone_number
+        ]);
+        return response()->json(['message' => 'Registration completed successfully'],200);
+    }
 
     public function resetPassword(ResetPasswordRequest $request)
     {
@@ -75,6 +89,4 @@ class AuthController extends Controller
             ? response()->json(['message' => 'Reset link sent to your email!'], 200)
             : response()->json(['message' => __($status)], 400);
     }
-
-    
 }
