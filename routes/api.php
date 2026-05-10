@@ -34,3 +34,7 @@ Route::post('/email/resend', function (Request $request) {
     $user->sendEmailVerificationNotification();
     return response()->json(['message' => 'Link sent']);
 })->middleware(['throttle:6,1'])->name('verification.send');
+
+//Password reset routes
+Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
+Route::post('/password/reset', [AuthController::class, 'resetPassword']);
