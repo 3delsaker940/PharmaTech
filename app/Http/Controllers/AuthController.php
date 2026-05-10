@@ -1,0 +1,80 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\RegisterRequest;
+use Illuminate\Http\Request;
+use App\Http\Requests\ResetPasswordRequest;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+
+class AuthController extends Controller
+{
+    public function register(RegisterRequest $request)
+    {
+        try {
+            return DB::transaction(function () use ($request) {
+
+                Log::info('Attempting user registration', [
+                    'email' => $request->email
+                ]);
+                $user = User::create([
+                    'email' => $request->email,
+                    'password' => $request->password
+                ]);
+                $user->sendEmailVerificationNotification();
+                Log::info('User registered successfully', ['user_id' => $user->id]);
+                return response()->json([
+                    'message' => 'User registered successfully. Please check your email for verification link.'
+                ]);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error occurred while registering user', [
+                'error' => $e->getMessage()
+            ]);
+            return response()->json([
+                'message' => 'An error occurred while registering the user.'
+            ], 500);
+        }
+    }
+
+
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        log::info('Attempting password reset', [
+            'email' => $request->email
+        ]);
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function ($user, $password) {
+                $user->forceFill([
+                    'password' => Hash::make($password)
+                ])->save();
+
+                $user->tokens()->delete();
+            }
+        );
+        log::info('Password reset attempt', [
+            'status' => $status
+        ]);
+        return $status === Password::PASSWORD_RESET
+            ? response()->json(['message' => 'Your password has been reset!'], 200)
+            : response()->json(['message' => __($status)], 400);
+    }
+
+    public function forgotPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email'
+        ]);
+        $status = Password::sendResetLink($request->only('email'));
+        return $status === Password::RESET_LINK_SENT
+            ? response()->json(['message' => 'Reset link sent to your email!'], 200)
+            : response()->json(['message' => __($status)], 400);
+    }
+
+    
+}
