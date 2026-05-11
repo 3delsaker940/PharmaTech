@@ -6,6 +6,7 @@ use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\Request;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Requests\CompleteRegistrationRequest;
+use App\Http\Resources\RegisterResource;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -18,23 +19,27 @@ class AuthController extends Controller
     public function register(RegisterRequest $request)
     {
         try {
-            return DB::transaction(function () use ($request) {
-
-                Log::info('Attempting user registration', [
-                    'email' => $request->email
-                ]);
-                $user = User::create([
-                    'email' => $request->email,
-                    'password' => $request->password
-                ]);
-                $user->sendEmailVerificationNotification();
-                $token = $user->createToken('auth_token')->plainTextToken;
-                Log::info('User registered successfully', ['user_id' => $user->id]);
-                return response()->json([
-                    'message' => 'User registered successfully. Please check your email for verification link.',
-                    'token' => $token
-                ]);
-            });
+            return DB::transaction(
+                function () use ($request) {
+                    Log::info('Attempting user registration', [
+                        'email' => $request->email,
+                        'name' =>  $request->first_name . ' ' . $request->middle_name . ' ' . $request->last_name
+                    ]);
+                    $user = User::create([
+                        'email' => $request->email,
+                        'password' => $request->password,
+                        'first_name' => $request->first_name,
+                        'middle_name' => $request->middle_name,
+                        'last_name' => $request->last_name,
+                        'phone_number' => $request->phone_number,
+                        'licence_number' => $request->licence_number
+                    ]);
+                    $user->sendEmailVerificationNotification();
+                    $token = $user->createToken('auth_token')->plainTextToken;
+                    Log::info('User registered successfully', ['user_id' => $user->id]);
+                    return new RegisterResource($user->setAttribute('token', $token));
+                }
+            );
         } catch (\Exception $e) {
             Log::error('Error occurred while registering user', [
                 'error' => $e->getMessage()
@@ -45,17 +50,6 @@ class AuthController extends Controller
         }
     }
 
-    public function completeRegistration(CompleteRegistrationRequest $request)
-    {
-        $user = $request->user();
-        $user->update([
-            'first_name' => $request->first_name,
-            'middle_name' => $request->middle_name,
-            'last_name' => $request->last_name,
-            'phone_number' => $request->phone_number
-        ]);
-        return response()->json(['message' => 'Registration completed successfully'], 200);
-    }
     public function login(Request $request)
     {
         Log::info('Attempting user login', [

@@ -10,7 +10,6 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::post('/register', [AuthController::class, 'register']);
-Route::put('/register/complete', [AuthController::class, 'completeRegistration'])->middleware('auth:sanctum', 'verified');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 Route::post('/logout-all', [AuthController::class, 'logoutAll'])->middleware('auth:sanctum');
