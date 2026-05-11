@@ -1,0 +1,14 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.pharmacy_app",
+      "sha256_cert_fingerprints": [
+        "60:D6:66:D8:56:1B:4B:D3:3F:F5:13:75:79:14:6F:86:C0:DF:D1:31:B7:39:66:A6:BE:70:23:25:C5:C2:A2:F6"
+      ]
+    }
+  }
+]
+
+ 

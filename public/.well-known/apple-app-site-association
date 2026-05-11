@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "TEAMID.com.example.pharmacyApp"
+        ],
+        "paths": [
+          "/reset-password/*",
+          "/reset-password"
+        ]
+      }
+    ]
+  }
+}

@@ -24,7 +24,17 @@ class RegisterRequest extends FormRequest
                     ->letters()
                     ->numbers(),
                 'confirmed'
-            ]
+            ],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'phone_number' => [
+                'required',
+                'unique:users,phone_number',
+                'string',
+                'regex:/^(?:\+9639|09|009639)\d{8}$/'
+            ],
+            'licence_number' => ['required', 'string', 'max:255']
         ];
     }
 }
