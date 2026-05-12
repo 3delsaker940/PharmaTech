@@ -6,8 +6,11 @@ use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\Request;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Requests\CompleteRegistrationRequest;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RefreshTokenRequest;
 use App\Http\Resources\RegisterResource;
 use App\Models\User;
+use App\Services\Auth\RefreshTokenService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -16,11 +19,11 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    public function register(RegisterRequest $request)
+    public function register(RegisterRequest $request, RefreshTokenService $refreshTokenService)
     {
         try {
             return DB::transaction(
-                function () use ($request) {
+                function () use ($request, $refreshTokenService) {
                     Log::info('Attempting user registration', [
                         'email' => $request->email,
                         'name' =>  $request->first_name . ' ' . $request->middle_name . ' ' . $request->last_name
@@ -35,9 +38,18 @@ class AuthController extends Controller
                         'licence_number' => $request->licence_number
                     ]);
                     $user->sendEmailVerificationNotification();
-                    $token = $user->createToken('auth_token')->plainTextToken;
+                    $accessToken  = $user->createToken('auth_token')->plainTextToken;
+                    $refreshData  = $refreshTokenService->issue(
+                        $user,
+                        $request->input('device_name', 'auth_token'),
+                        $request->ip(),
+                        $request->userAgent()
+                    );
+
                     Log::info('User registered successfully', ['user_id' => $user->id]);
-                    return new RegisterResource($user->setAttribute('token', $token));
+                    return (new RegisterResource($user, $accessToken, $refreshData['refresh_token']))
+                        ->response()
+                        ->setStatusCode(201);
                 }
             );
         } catch (\Exception $e) {
@@ -50,7 +62,7 @@ class AuthController extends Controller
         }
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest  $request, RefreshTokenService $refreshTokenService)
     {
         Log::info('Attempting user login', [
             'email' => $request->email
@@ -82,11 +94,24 @@ class AuthController extends Controller
                 'email' => $request->email
             ]);
 
-            $token = $user->createToken('auth_token')->plainTextToken;
+            $deviceName = $request->input('device_name', 'auth_token');
+
+            $accessToken = $user->createToken($deviceName)->plainTextToken;
+
+            $refreshData = $refreshTokenService->issue(
+                $user,
+                $deviceName,
+                $request->ip(),
+                $request->userAgent()
+            );
+
             return response()->json([
                 'message' => 'User logged in successfully',
-                'token' => $token
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshData['refresh_token'],
+                'token_type' => 'Bearer',
             ], 200);
+
         } catch (\Exception $e) {
             Log::error('Error during user login', [
                 'error_message' => $e->getMessage(),
@@ -98,35 +123,73 @@ class AuthController extends Controller
         }
     }
 
-    public function logout(Request $request)
+    public function refresh(RefreshTokenRequest $request, RefreshTokenService $refreshTokenService)
     {
-        $request->user()->currentAccessToken()->delete();
+        try {
+            $refreshData = $refreshTokenService->rotate(
+                $request->refresh_token,
+                $request->input('device_name'),
+                $request->ip(),
+                $request->userAgent()
+            );
+
+            /** @var \App\Models\User $user */
+            $user = $refreshData['record']->user;
+
+            $deviceName = $request->input('device_name', 'auth_token');
+
+            $accessToken = $user->createToken($deviceName)->plainTextToken;
+
+            return response()->json([
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshData['refresh_token'],
+                'token_type' => 'Bearer',
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Invalid or expired refresh token',
+            ], 401);
+        }
+    }
+
+    public function logout(Request $request, RefreshTokenService $refreshTokenService)
+    {
+        $request->user()->currentAccessToken()?->delete();
+
+        if ($request->filled('refresh_token')) {
+            $refreshTokenService->revokeByPlainToken($request->refresh_token);
+        }
+
         return response()->json([
             'message' => 'user logged out successfully',
         ], 200);
     }
 
-    public function  logoutAll(Request $request)
+    public function  logoutAll(Request $request, RefreshTokenService $refreshTokenService)
     {
         $request->user()->tokens()->delete();
+        $refreshTokenService->revokeAllForUser($request->user());
+
         return response()->json([
             'message' => 'user logged out from all sessions successfully',
         ], 200);
     }
 
-    public function resetPassword(ResetPasswordRequest $request)
+    public function resetPassword(ResetPasswordRequest $request, RefreshTokenService $refreshTokenService)
     {
-        log::info('Attempting password reset', [
-            'email' => $request->email
+        Log::info('Attempting password reset', [
+            'email' => $request->email,
         ]);
+
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
+            function ($user, $password) use ($refreshTokenService) {
                 $user->forceFill([
-                    'password' => Hash::make($password)
+                    'password' => Hash::make($password),
                 ])->save();
 
                 $user->tokens()->delete();
+                $refreshTokenService->revokeAllForUser($user);
             }
         );
         log::info('Password reset attempt', [
