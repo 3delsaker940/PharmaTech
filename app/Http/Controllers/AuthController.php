@@ -47,18 +47,9 @@ class AuthController extends Controller
                     );
 
                     Log::info('User registered successfully', ['user_id' => $user->id]);
-                    return response()->json([
-                        'message' => 'User registered successfully. Please check your email for verification link.',
-                        'first_name' => $user->first_name,
-                        'middle_name' => $user->middle_name,
-                        'last_name' => $user->last_name,
-                        'email' => $user->email,
-                        'phone_number' => $user->phone_number,
-                        'licence_number' => $user->licence_number,
-                        'token' => $accessToken,
-                        'refresh_token' => $refreshData['refresh_token'],
-                        'token_type' => 'Bearer',
-                    ], 201);
+                    return (new RegisterResource($user, $accessToken, $refreshData['refresh_token']))
+                        ->response()
+                        ->setStatusCode(201);
                 }
             );
         } catch (\Exception $e) {

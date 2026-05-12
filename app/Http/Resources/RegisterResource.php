@@ -7,6 +7,15 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class RegisterResource extends JsonResource
 {
+    protected $accessToken;
+    protected $refreshToken;
+
+    public function __construct($resource, $accessToken = null, $refreshToken = null)
+    {
+        parent::__construct($resource);
+        $this->accessToken = $accessToken;
+        $this->refreshToken = $refreshToken;
+    }
     public function toArray(Request $request): array
     {
         return [
@@ -17,7 +26,9 @@ class RegisterResource extends JsonResource
             'email' => $this->email,
             'phone_number' => $this->phone_number,
             'licence_number' => $this->licence_number,
-            'token' => $this->token
+            'token' => $this->accessToken,
+            'refresh_token' => $this->refreshToken,
+            'token_type' => 'Bearer',
         ];
     }
 }
