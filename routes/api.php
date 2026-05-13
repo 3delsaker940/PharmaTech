@@ -1,5 +1,6 @@
 <?php
 
+
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -41,3 +42,5 @@ Route::post('/email/resend', function (Request $request) {
 //Password reset routes
 Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
 Route::post('/password/reset', [AuthController::class, 'resetPassword']);
+
+
