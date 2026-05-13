@@ -1,5 +1,6 @@
 <?php
 
+
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -20,4 +21,5 @@ Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail'])
 
 //Password reset routes
 Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
+
 Route::post('/password/reset', [AuthController::class, 'resetPassword'])->name('password.resend');
