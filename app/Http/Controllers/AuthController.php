@@ -68,11 +68,6 @@ class AuthController extends Controller
             'email' => $request->email
         ]);
         try {
-            $request->validate([
-                'email' => 'required|email',
-                'password' => 'required'
-
-            ]);
             if (!Auth::attempt($request->only('email', 'password'))) {
                 Log::warning('User login failed - invalid credentials', [
                     'email' => $request->email
@@ -85,11 +80,11 @@ class AuthController extends Controller
             $user = Auth::user();
             if (!$user->hasVerifiedEmail()) {
                 Auth::logout();
+                $user->sendEmailVerificationNotification();
                 return response()->json([
-                    'message' => 'Please verify your email first'
+                    'message' => 'Please verify your email first. A new verification link has been sent to your email.'
                 ], 403);
             }
-
             Log::info('User logged in successfully', [
                 'email' => $request->email
             ]);
@@ -104,14 +99,12 @@ class AuthController extends Controller
                 $request->ip(),
                 $request->userAgent()
             );
-
             return response()->json([
                 'message' => 'User logged in successfully',
                 'access_token' => $accessToken,
                 'refresh_token' => $refreshData['refresh_token'],
                 'token_type' => 'Bearer',
             ], 200);
-
         } catch (\Exception $e) {
             Log::error('Error during user login', [
                 'error_message' => $e->getMessage(),
@@ -173,6 +166,31 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'user logged out from all sessions successfully',
         ], 200);
+    }
+
+    public function verifyEmail($id, $hash)
+    {
+        $user = User::findOrFail($id);
+
+        if (!hash_equals($hash, sha1($user->email))) {
+            return response()->json(['message' => 'Invalid verification link'], 403);
+        }
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified'], 200);
+        }
+        $user->markEmailAsVerified();
+
+        return response()->json(['message' => 'Email verified successfully'], 200);
+    }
+
+    public function resendVerificationEmail(Request $request)
+    {
+        $user = User::where('email', $request->email)->firstOrFail();
+        if ($user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Email already verified'], 200);
+        }
+        $user->sendEmailVerificationNotification();
+        return response()->json(['message' => 'Link sent']);
     }
 
     public function resetPassword(ResetPasswordRequest $request, RefreshTokenService $refreshTokenService)
