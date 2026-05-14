@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\Request;
 use App\Http\Requests\ResetPasswordRequest;
-use App\Http\Requests\CompleteRegistrationRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RefreshTokenRequest;
 use App\Http\Resources\RegisterResource;
+use App\Http\Resources\LoginResource;
 use App\Models\User;
 use App\Services\Auth\RefreshTokenService;
 use Illuminate\Support\Facades\Log;
@@ -47,6 +47,7 @@ class AuthController extends Controller
                     );
 
                     Log::info('User registered successfully', ['user_id' => $user->id]);
+
                     return (new RegisterResource($user, $accessToken, $refreshData['refresh_token']))
                         ->response()
                         ->setStatusCode(201);
@@ -99,12 +100,11 @@ class AuthController extends Controller
                 $request->ip(),
                 $request->userAgent()
             );
-            return response()->json([
-                'message' => 'User logged in successfully',
-                'access_token' => $accessToken,
-                'refresh_token' => $refreshData['refresh_token'],
-                'token_type' => 'Bearer',
-            ], 200);
+            $user->accessToken = $accessToken;
+            $user->refreshToken = $refreshData['refresh_token'];
+            return (new LoginResource($user))
+                ->response()
+                ->setStatusCode(201);
         } catch (\Exception $e) {
             Log::error('Error during user login', [
                 'error_message' => $e->getMessage(),
