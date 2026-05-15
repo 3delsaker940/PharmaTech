@@ -29,4 +29,4 @@ Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail'])
 
 //Password reset routes
 Route::post('/password/forgot', [AuthController::class, 'forgotPassword']);
-Route::post('/password/reset', [AuthController::class, 'resetPassword'])->name('password.resend');
+Route::post('/password/reset', [AuthController::class, 'resetPassword'])->name('password.reset');

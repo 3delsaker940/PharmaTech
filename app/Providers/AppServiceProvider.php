@@ -26,16 +26,24 @@ class AppServiceProvider extends ServiceProvider
         }
 
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
-            $email = $notifiable->getEmailForPasswordReset();
-            return "pharmatech://reset-password?token={$token}&email={$email}";
+            return URL::temporarySignedRoute(
+                'password.reset',
+                now()->addMinutes(60),
+                [
+                    'token' => $token,
+                    'email' => $notifiable->getEmailForPasswordReset(),
+                ]
+            );
         });
 
-        // Clean signature generation—no more str_replace hacks!
         VerifyEmail::createUrlUsing(function ($notifiable) {
             return URL::temporarySignedRoute(
                 'verification.verify',
                 now()->addMinutes(60),
-                ['id' => $notifiable->getKey(), 'hash' => sha1($notifiable->getEmailForVerification())]
+                [
+                    'id' => $notifiable->getKey(),
+                    'hash' => sha1($notifiable->getEmailForVerification())
+                ]
             );
         });
     }
