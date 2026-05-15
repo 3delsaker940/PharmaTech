@@ -26,16 +26,22 @@ class AuthController extends Controller
                 function () use ($request, $refreshTokenService) {
                     Log::info('Attempting user registration', [
                         'email' => $request->email,
-                        'name' =>  $request->first_name . ' ' . $request->middle_name . ' ' . $request->last_name
+                        'name' =>  $request->first_name . ' ' . $request->father_name . ' ' . $request->last_name
                     ]);
                     $user = User::create([
                         'email' => $request->email,
                         'password' => $request->password,
                         'first_name' => $request->first_name,
-                        'middle_name' => $request->middle_name,
+                        'father_name' => $request->father_name,
                         'last_name' => $request->last_name,
                         'phone_number' => $request->phone_number,
-                        'licence_number' => $request->licence_number
+                        'licence_number' => $request->licence_number,
+                    ]);
+                    $user->pharmacies()->create([
+                        'name' => $request->pharmacy_name,
+                        // 'governorate_id' => $request->governorate_id,
+                        'city_id' => $request->city_id,
+                        'address' => $request->address,
                     ]);
                     $user->sendEmailVerificationNotification();
                     $accessToken  = $user->createToken('auth_token')->plainTextToken;
@@ -45,9 +51,9 @@ class AuthController extends Controller
                         $request->ip(),
                         $request->userAgent()
                     );
-
                     Log::info('User registered successfully', ['user_id' => $user->id]);
 
+                    $user->load('pharmacies');
                     return (new RegisterResource($user, $accessToken, $refreshData['refresh_token']))
                         ->response()
                         ->setStatusCode(201);

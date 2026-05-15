@@ -24,7 +24,7 @@ class RefreshTokenRequest extends FormRequest
     {
         return [
             'refresh_token' => ['required', 'string'],
-            'device_name' => ['nullable', 'string', 'max:255'],
+            'device_name' => ['nullable', 'string', 'max:255', 'sometimes'],
         ];
     }
 }

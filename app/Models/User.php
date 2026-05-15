@@ -13,7 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasFactory, Notifiable, HasApiTokens;
-    protected $guarded = [];
+    protected $guarded = ['id'];
     protected function casts(): array
     {
         return [
@@ -25,4 +25,10 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(\App\Models\RefreshToken::class);
     }
+
+    public function pharmacies()
+    {
+        return $this->hasMany(Pharmacy::class);
+    }
+
 }
