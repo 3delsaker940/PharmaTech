@@ -110,7 +110,7 @@ class AuthController extends Controller
             $user->refreshToken = $refreshData['refresh_token'];
             return (new LoginResource($user))
                 ->response()
-                ->setStatusCode(201);
+                ->setStatusCode(200);
         } catch (\Exception $e) {
             Log::error('Error during user login', [
                 'error_message' => $e->getMessage(),
@@ -227,8 +227,12 @@ class AuthController extends Controller
     public function forgotPassword(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email'
+            'email' => 'required|email|exists:users,email',
         ]);
+        $user = User::where('email', $request->email)->firstOrFail();
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Please verify your email first.'], 403);
+        }
         $status = Password::sendResetLink($request->only('email'));
         return $status === Password::RESET_LINK_SENT
             ? response()->json(['message' => 'Reset link sent to your email!'], 200)
