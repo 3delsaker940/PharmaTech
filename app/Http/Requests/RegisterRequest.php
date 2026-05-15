@@ -26,7 +26,7 @@ class RegisterRequest extends FormRequest
                 'confirmed'
             ],
             'first_name' => ['required', 'string', 'max:255'],
-            'middle_name' => ['required', 'string', 'max:255'],
+            'father_name' => ['nullable','sometimes', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'phone_number' => [
                 'required',
@@ -34,6 +34,10 @@ class RegisterRequest extends FormRequest
                 'string',
                 'regex:/^(?:\+9639|09|009639)\d{8}$/'
             ],
+            'pharmacy_name' => ['required', 'string', 'max:255'],
+            // 'governorate_id' => ['required', 'exists:governorates,id'],
+            'city_id' => ['required', 'exists:cities,id'],
+            'address' => ['nullable', 'string', 'max:255', 'sometimes'],
             'licence_number' => ['required', 'string', 'max:255']
         ];
     }
