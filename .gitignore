@@ -25,3 +25,4 @@ Homestead.yaml
 Thumbs.db
 desktop.ini
 env_docker
+env_local
