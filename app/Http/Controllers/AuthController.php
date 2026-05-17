@@ -186,7 +186,7 @@ class AuthController extends Controller
         }
         $user->markEmailAsVerified();
 
-        return response()->json(['message' => 'Email verified successfully'], 200);
+        return redirect('pharmacyapp://email-verified?status=success');
     }
 
     public function resendVerificationEmail(Request $request)
@@ -237,5 +237,17 @@ class AuthController extends Controller
         return $status === Password::RESET_LINK_SENT
             ? response()->json(['message' => 'Reset link sent to your email!'], 200)
             : response()->json(['message' => __($status)], 400);
+    }
+
+    public function redirectToApp(Request $request)
+    {
+        $token = $request->query('token');
+        $email = $request->query('email');
+
+        return redirect(
+            'pharmacyapp://reset-password'
+                . '?token=' . urlencode($token)
+                . '&email=' . urlencode($email)
+        );
     }
 }
