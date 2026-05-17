@@ -5,6 +5,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Models\Governorate;
+use App\Http\Resources\GovernorateResource;
+use App\Http\Resources\CityResource;
 use App\Models\City;
 
 Route::get('/user', function (Request $request) {
@@ -14,30 +16,35 @@ Route::get('/user', function (Request $request) {
 Route::post('/register', [AuthController::class, 'register']);
 
 Route::post('/login', [AuthController::class, 'login'])
-->middleware('throttle:3,1');
+    ->middleware('throttle:3,1');
 
 Route::post('/refresh', [AuthController::class, 'refresh']);
 
 Route::post('/logout', [AuthController::class, 'logout'])
-->middleware('auth:sanctum');
+    ->middleware('auth:sanctum');
 
 Route::post('/logout-all', [AuthController::class, 'logoutAll'])
-->middleware('auth:sanctum');
-
+    ->middleware('auth:sanctum');
 Route::get('/governorates', function () {
-    return Governorate::all();
+    $governorates = Governorate::all();
+    return GovernorateResource::collection($governorates);
 });
 Route::get('/cities', function () {
-    return City::all();
+    $cities = City::all();
+    return CityResource::collection($cities);
+});
+Route::get('/governorates-cities', function () {
+    $governorates = Governorate::with('cities')->get();
+    return GovernorateResource::collection($governorates);
 });
 
 Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-->middleware('signed')
-->name('verification.verify');
+    ->middleware('signed')
+    ->name('verification.verify');
 
 Route::post('/email/resend', [AuthController::class, 'resendVerificationEmail'])
-->middleware(['throttle:1,1'])
-->name('verification.send');
+    ->middleware(['throttle:1,1'])
+    ->name('verification.send');
 
 // Password reset routes
 Route::post('/password/forgot', [AuthController::class, 'forgotPassword'])

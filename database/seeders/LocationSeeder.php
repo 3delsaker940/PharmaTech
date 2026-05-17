@@ -15,19 +15,38 @@ class LocationSeeder extends Seeder
 
         DB::transaction(function () use ($locations) {
 
-            foreach ($locations as $govName => $cities) {
-                $governorate = Governorate::firstOrCreate([
-                    'name' => $govName
-                ]);
+            foreach ($locations as $govKey => $citiesKeys) {
+
+                $govNameEn = __("locations.{$govKey}", [], 'en');
+                $govNameAr = __("locations.{$govKey}", [], 'ar');
+
+                $governorate = Governorate::where('name->en', $govNameEn)->first();
+                if (!$governorate) {
+                    $governorate = Governorate::create([
+                        'name' => [
+                            'en' => $govNameEn,
+                            'ar' => $govNameAr,
+                        ]
+                    ]);
+                }
+
                 $citiesData = [];
-                foreach ($cities as $cityName) {
+                foreach ($citiesKeys as $cityKey) {
+
+                    $cityNameEn = __("locations.{$cityKey}", [], 'en');
+                    $cityNameAr = __("locations.{$cityKey}", [], 'ar');
+
                     $citiesData[] = [
                         'governorate_id' => $governorate->id,
-                        'name' => $cityName,
+                        'name' => json_encode([
+                            'en' => $cityNameEn,
+                            'ar' => $cityNameAr,
+                        ], JSON_UNESCAPED_UNICODE),
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
                 }
+
                 City::insert($citiesData);
             }
         });
