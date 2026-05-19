@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Auth;
+use Google\Client as GoogleClient;
 
 class AuthController extends Controller
 {
@@ -249,5 +250,36 @@ class AuthController extends Controller
                 . '?token=' . urlencode($token)
                 . '&email=' . urlencode($email)
         );
+    }
+
+    public function googleLogin(Request $request)
+    {
+        $request->validate([
+            'id_token' => 'required'
+        ]);
+        $client = new GoogleClient(['client_id' => env('GOOGLE_CLIENT_ID')]);
+        $payload = $client->verifyIdToken($request->id_token);
+        if (!$payload) {
+            return response()->json([
+                'message' => 'Invalid Google token'
+            ], 401);
+        }
+        $googleId = $payload['sub'];
+        $email = $payload['email'];
+        $name = $payload['name'] ?? null;
+        $avatar = $payload['picture'] ?? null;
+        $user = User::updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => $name,
+                'google_id' => $googleId,
+                'avatar' => $avatar,
+            ]
+        );
+        $token = $user->createToken('google-login')->plainTextToken;
+        return response()->json([
+            'user' => $user,
+            'token' => $token
+        ]);
     }
 }
