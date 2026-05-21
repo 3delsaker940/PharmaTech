@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CompleteProfileRequest;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\Request;
 use App\Http\Requests\ResetPasswordRequest;
@@ -286,14 +287,20 @@ class AuthController extends Controller
                 ]
             );
             $isNewUser = $user->wasRecentlyCreated;
-            $token = $user->createToken('google-login')->plainTextToken;
+            $accessToken = $user->createToken('google-login')->plainTextToken;
+            if (!$isNewUser) {
+                $user->load('pharmacies');
+                return (new RegisterResource($user, $accessToken))
+                    ->response()
+                    ->setStatusCode(200);
+            }
             return response()->json([
                 'status' => true,
                 'message' => $isNewUser ? 'Account created successfully' : 'Login successful',
                 'data' => [
                     'user' => new UserResource($user),
                     'is_new_user' => $isNewUser,
-                    'token' => $token
+                    'token' => $accessToken
                 ]
             ], 200);
         } catch (\Exception $e) {
@@ -301,6 +308,40 @@ class AuthController extends Controller
                 'status' => false,
                 'message' => 'Something went wrong on the server',
                 'error' => env('APP_DEBUG') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    public function completeProfile(CompleteProfileRequest $request)
+    {
+        try {
+            return DB::transaction(function () use ($request) {
+                $user = $request->user();
+                $user->update([
+                    'first_name' => $request->first_name,
+                    'father_name' => $request->father_name,
+                    'last_name' => $request->last_name,
+                    'phone_number' => $request->phone_number,
+                    'licence_number' => $request->licence_number
+                ]);
+                $user->pharmacies()->updateOrCreate([
+                    'name' => $request->pharmacy_name,
+                    'city_id' => $request->city_id,
+                    'address' => $request->address,
+                ]);
+                $accessToken = $request->bearerToken();
+                Log::info('User registered successfully', ['user_id' => $user->id]);
+                $user->load('pharmacies');
+                return (new RegisterResource($user, $accessToken))
+                    ->response()
+                    ->setStatusCode(200);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error occurred while registering user', [
+                'error' => $e->getMessage()
+            ]);
+            return response()->json([
+                'message' => 'An error occurred while registering the user.'
             ], 500);
         }
     }
