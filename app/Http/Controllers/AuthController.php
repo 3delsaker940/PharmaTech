@@ -9,6 +9,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RefreshTokenRequest;
 use App\Http\Resources\RegisterResource;
 use App\Http\Resources\LoginResource;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Auth\RefreshTokenService;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Auth;
 use Google\Client as GoogleClient;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -254,32 +256,52 @@ class AuthController extends Controller
 
     public function googleLogin(Request $request)
     {
-        $request->validate([
-            'id_token' => 'required'
-        ]);
-        $client = new GoogleClient(['client_id' => env('GOOGLE_CLIENT_ID')]);
-        $payload = $client->verifyIdToken($request->id_token);
-        if (!$payload) {
+        try {
+            $request->validate([
+                'id_token' => 'required'
+            ]);
+            $client = new GoogleClient(['client_id' => env('GOOGLE_CLIENT_ID')]);
+            $payload = $client->verifyIdToken($request->id_token);
+            if (!$payload) {
+                return response()->json([
+                    'message' => 'Invalid Google token'
+                ], 401);
+            }
+            $googleId = $payload['sub'];
+            $email = $payload['email'];
+            $name = $payload['name'] ?? null;
+            $avatar = $payload['picture'] ?? null;
+            $parts = explode(' ', $name, 2);
+            $firstName = $parts[0] ?? 'Google';
+            $lastName = $parts[1] ?? 'User';
+            $user = User::firstOrCreate(
+                ['email' => $email],
+                [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'google_id' => $googleId,
+                    'avatar' => $avatar,
+                    'password' => Hash::make(Str::random(32)),
+                    'email_verified_at' => now(),
+                ]
+            );
+            $isNewUser = $user->wasRecentlyCreated;
+            $token = $user->createToken('google-login')->plainTextToken;
             return response()->json([
-                'message' => 'Invalid Google token'
-            ], 401);
+                'status' => true,
+                'message' => $isNewUser ? 'Account created successfully' : 'Login successful',
+                'data' => [
+                    'user' => new UserResource($user),
+                    'is_new_user' => $isNewUser,
+                    'token' => $token
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong on the server',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : null
+            ], 500);
         }
-        $googleId = $payload['sub'];
-        $email = $payload['email'];
-        $name = $payload['name'] ?? null;
-        $avatar = $payload['picture'] ?? null;
-        $user = User::updateOrCreate(
-            ['email' => $email],
-            [
-                'name' => $name,
-                'google_id' => $googleId,
-                'avatar' => $avatar,
-            ]
-        );
-        $token = $user->createToken('google-login')->plainTextToken;
-        return response()->json([
-            'user' => $user,
-            'token' => $token
-        ]);
     }
 }
