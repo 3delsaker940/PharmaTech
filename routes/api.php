@@ -58,3 +58,4 @@ Route::get('/password/reset', [AuthController::class, 'redirectToApp'])
 Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 //sign in with google
 Route::post('/auth/google', [AuthController::class, 'googleLogin']);
+Route::post('auth/google/complete-profile', [AuthController::class, 'completeProfile'])->middleware('auth:sanctum');
