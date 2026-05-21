@@ -56,3 +56,5 @@ Route::get('/password/reset', [AuthController::class, 'redirectToApp'])
     ->name('password.reset');
 
 Route::post('/password/reset', [AuthController::class, 'resetPassword']);
+//sign in with google
+Route::post('/auth/google', [AuthController::class, 'googleLogin']);
