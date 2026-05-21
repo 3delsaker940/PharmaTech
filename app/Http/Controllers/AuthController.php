@@ -178,8 +178,11 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function verifyEmail($id, $hash)
+    public function verifyEmail($id, $hash, Request $request)
     {
+        $request->validate([
+            'platform' => 'required|in:web,mobile'
+        ]);
         $user = User::findOrFail($id);
 
         if (!hash_equals($hash, sha1($user->email))) {
@@ -190,6 +193,9 @@ class AuthController extends Controller
         }
         $user->markEmailAsVerified();
 
+        if ($request->query('platform') === 'web') {
+            return redirect('http://localhost:5173/login/pharmacist' . '/email-verified?status=success');
+        }
         return redirect('pharmacyapp://email-verified?status=success');
     }
 
@@ -247,6 +253,15 @@ class AuthController extends Controller
     {
         $token = $request->query('token');
         $email = $request->query('email');
+        $platform = $request->query('web', 'mobile');
+
+        if ($platform === 'web') {
+            return redirect(
+                'http://localhost:5173/email-verify'
+                    . '?token=' . urlencode($token)
+                    . '&email=' . urlencode($email)
+            );
+        }
 
         return redirect(
             'pharmacyapp://reset-password'
