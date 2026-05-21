@@ -32,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
                 [
                     'token' => $token,
                     'email' => $notifiable->getEmailForPasswordReset(),
+                    'platform' => request()->input('platform', 'mobile')
                 ]
             );
         });
@@ -42,7 +43,8 @@ class AppServiceProvider extends ServiceProvider
                 now()->addMinutes(60),
                 [
                     'id' => $notifiable->getKey(),
-                    'hash' => sha1($notifiable->getEmailForVerification())
+                    'hash' => sha1($notifiable->getEmailForVerification()),
+                    'platform' => request()->input('platform', 'mobile')
                 ]
             );
         });
