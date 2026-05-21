@@ -8,6 +8,16 @@ use App\Models\City;
 
 class LoginResource extends JsonResource
 {
+    protected $accessToken;
+    protected $refreshToken;
+
+    public function __construct($resource, $accessToken = null, $refreshToken = null)
+    {
+        parent::__construct($resource);
+
+        $this->accessToken = $accessToken;
+        $this->refreshToken = $refreshToken;
+    }
     public function toArray(Request $request): array
     {
         $pharmacy = $this->pharmacies->first();
@@ -23,9 +33,6 @@ class LoginResource extends JsonResource
                 'email' => $this->email,
                 'phone_number' => $this->phone_number,
                 'licence_number' => $this->licence_number,
-                'access_token' => $this->accessToken,
-                'refresh_token' => $this->refreshToken,
-                'token_type' => 'Bearer',
             ],
             'pharmacy' => [
                 'name' => $pharmacy->name ?? null,
@@ -33,6 +40,9 @@ class LoginResource extends JsonResource
                 'city_id' => $pharmacy->city_id ?? null,
                 'address' => $pharmacy->address ?? null,
             ],
+            'access_token' => $this->accessToken,
+            'refresh_token' => $this->refreshToken,
+            'token_type' => 'Bearer',
         ];
     }
 }

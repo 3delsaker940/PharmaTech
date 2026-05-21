@@ -23,6 +23,37 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    private const ACCESS_TOKEN_MINUTES = 15;
+
+    private function issueTokenPair(
+        User $user,
+        Request $request,
+        RefreshTokenService $refreshTokenService,
+        ?string $deviceName = null
+    ): array {
+        $deviceName = $deviceName ?: $request->input('device_name', 'auth_token');
+
+        $accessToken = $user->createToken(
+            $deviceName,
+            ['*'],
+            now()->addMinutes(self::ACCESS_TOKEN_MINUTES)
+        )->plainTextToken;
+
+        $refreshData = $refreshTokenService->issue(
+            $user,
+            $deviceName,
+            $request->ip(),
+            $request->userAgent()
+        );
+
+        return [
+            'access_token' => $accessToken,
+            'refresh_token' => $refreshData['refresh_token'],
+            'token_type' => 'Bearer',
+            'device_name' => $deviceName,
+        ];
+    }
+
     public function register(RegisterRequest $request, RefreshTokenService $refreshTokenService)
     {
         try {
@@ -48,17 +79,19 @@ class AuthController extends Controller
                         'address' => $request->address,
                     ]);
                     $user->sendEmailVerificationNotification();
-                    $accessToken  = $user->createToken('auth_token')->plainTextToken;
-                    $refreshData  = $refreshTokenService->issue(
+                    $tokens = $this->issueTokenPair(
                         $user,
-                        $request->input('device_name', 'auth_token'),
-                        $request->ip(),
-                        $request->userAgent()
+                        $request,
+                        $refreshTokenService
                     );
                     Log::info('User registered successfully', ['user_id' => $user->id]);
 
                     $user->load('pharmacies');
-                    return (new RegisterResource($user, $accessToken, $refreshData['refresh_token']))
+                    return (new RegisterResource(
+                        $user,
+                        $tokens['access_token'],
+                        $tokens['refresh_token']
+                    ))
                         ->response()
                         ->setStatusCode(201);
                 }
@@ -100,19 +133,20 @@ class AuthController extends Controller
                 'email' => $request->email
             ]);
 
-            $deviceName = $request->input('device_name', 'auth_token');
-
-            $accessToken = $user->createToken($deviceName)->plainTextToken;
-
-            $refreshData = $refreshTokenService->issue(
+            $tokens = $this->issueTokenPair(
                 $user,
-                $deviceName,
-                $request->ip(),
-                $request->userAgent()
+                $request,
+                $refreshTokenService,
+                $request->input('device_name', 'auth_token')
             );
-            $user->accessToken = $accessToken;
-            $user->refreshToken = $refreshData['refresh_token'];
-            return (new LoginResource($user))
+
+            $user->load('pharmacies');
+
+            return (new LoginResource(
+                $user,
+                $tokens['access_token'],
+                $tokens['refresh_token']
+            ))
                 ->response()
                 ->setStatusCode(200);
         } catch (\Exception $e) {
@@ -141,7 +175,11 @@ class AuthController extends Controller
 
             $deviceName = $request->input('device_name', 'auth_token');
 
-            $accessToken = $user->createToken($deviceName)->plainTextToken;
+            $accessToken = $user->createToken(
+                $deviceName,
+                ['*'],
+                now()->addMinutes(self::ACCESS_TOKEN_MINUTES)
+            )->plainTextToken;
 
             return response()->json([
                 'access_token' => $accessToken,
@@ -270,11 +308,12 @@ class AuthController extends Controller
         );
     }
 
-    public function googleLogin(Request $request)
+    public function googleLogin(Request $request, RefreshTokenService $refreshTokenService)
     {
         try {
             $request->validate([
-                'id_token' => 'required'
+                'id_token' => 'required',
+                'device_name' => 'nullable|string|max:255'
             ]);
             $client = new GoogleClient(['client_id' => env('GOOGLE_CLIENT_ID')]);
             $payload = $client->verifyIdToken($request->id_token);
@@ -287,7 +326,7 @@ class AuthController extends Controller
             $email = $payload['email'];
             $name = $payload['name'] ?? null;
             $avatar = $payload['picture'] ?? null;
-            $parts = explode(' ', $name, 2);
+            $parts = $name ? explode(' ', $name, 2) : [];
             $firstName = $parts[0] ?? 'Google';
             $lastName = $parts[1] ?? 'User';
             $user = User::firstOrCreate(
@@ -302,25 +341,34 @@ class AuthController extends Controller
                 ]
             );
             $isNewUser = $user->wasRecentlyCreated;
-            $accessToken = $user->createToken('google-login')->plainTextToken;
             if (!$isNewUser) {
-                $user->load('pharmacies');
-                return (new RegisterResource($user, $accessToken))
-                    ->response()
-                    ->setStatusCode(200);
+                $user->forceFill([
+                    'google_id' => $user->google_id ?: $googleId,
+                    'avatar' => $avatar ?: $user->avatar,
+                    'email_verified_at' => $user->email_verified_at ?: now(),
+                ])->save();
             }
+
+            $tokens = $this->issueTokenPair(
+                $user,
+                $request,
+                $refreshTokenService,
+                $request->input('device_name', 'google-login')
+            );
+
+            $user->load('pharmacies');
             return response()->json([
                 'status' => true,
                 'message' => $isNewUser ? 'Account created successfully' : 'Login successful',
                 'data' => [
                     'user' => new UserResource($user),
                     'is_new_user' => $isNewUser,
-                    'token' => $accessToken
+                    'access_token' => $tokens['access_token'],
+                    'refresh_token' => $tokens['refresh_token'],
                 ]
             ], 200);
-        } catch (\Exception $e) {
+        } catch (\Throwable  $e) {
             return response()->json([
-                'status' => false,
                 'message' => 'Something went wrong on the server',
                 'error' => env('APP_DEBUG') ? $e->getMessage() : null
             ], 500);
@@ -344,10 +392,10 @@ class AuthController extends Controller
                     'city_id' => $request->city_id,
                     'address' => $request->address,
                 ]);
-                $accessToken = $request->bearerToken();
+                //$accessToken = $request->bearerToken();
                 Log::info('User registered successfully', ['user_id' => $user->id]);
                 $user->load('pharmacies');
-                return (new RegisterResource($user, $accessToken))
+                return (new RegisterResource($user))
                     ->response()
                     ->setStatusCode(200);
             });
