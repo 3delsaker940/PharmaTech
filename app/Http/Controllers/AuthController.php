@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CompleteProfileRequest;
 use App\Http\Requests\RegisterRequest;
 use Illuminate\Http\Request;
 use App\Http\Requests\ResetPasswordRequest;
@@ -9,6 +10,7 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RefreshTokenRequest;
 use App\Http\Resources\RegisterResource;
 use App\Http\Resources\LoginResource;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Auth\RefreshTokenService;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +18,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Auth;
+use Google\Client as GoogleClient;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -186,7 +190,7 @@ class AuthController extends Controller
         }
         $user->markEmailAsVerified();
 
-        return response()->json(['message' => 'Email verified successfully'], 200);
+        return redirect('pharmacyapp://email-verified?status=success');
     }
 
     public function resendVerificationEmail(Request $request)
@@ -237,5 +241,108 @@ class AuthController extends Controller
         return $status === Password::RESET_LINK_SENT
             ? response()->json(['message' => 'Reset link sent to your email!'], 200)
             : response()->json(['message' => __($status)], 400);
+    }
+
+    public function redirectToApp(Request $request)
+    {
+        $token = $request->query('token');
+        $email = $request->query('email');
+
+        return redirect(
+            'pharmacyapp://reset-password'
+                . '?token=' . urlencode($token)
+                . '&email=' . urlencode($email)
+        );
+    }
+
+    public function googleLogin(Request $request)
+    {
+        try {
+            $request->validate([
+                'id_token' => 'required'
+            ]);
+            $client = new GoogleClient(['client_id' => env('GOOGLE_CLIENT_ID')]);
+            $payload = $client->verifyIdToken($request->id_token);
+            if (!$payload) {
+                return response()->json([
+                    'message' => 'Invalid Google token'
+                ], 401);
+            }
+            $googleId = $payload['sub'];
+            $email = $payload['email'];
+            $name = $payload['name'] ?? null;
+            $avatar = $payload['picture'] ?? null;
+            $parts = explode(' ', $name, 2);
+            $firstName = $parts[0] ?? 'Google';
+            $lastName = $parts[1] ?? 'User';
+            $user = User::firstOrCreate(
+                ['email' => $email],
+                [
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
+                    'google_id' => $googleId,
+                    'avatar' => $avatar,
+                    'password' => Hash::make(Str::random(32)),
+                    'email_verified_at' => now(),
+                ]
+            );
+            $isNewUser = $user->wasRecentlyCreated;
+            $accessToken = $user->createToken('google-login')->plainTextToken;
+            if (!$isNewUser) {
+                $user->load('pharmacies');
+                return (new RegisterResource($user, $accessToken))
+                    ->response()
+                    ->setStatusCode(200);
+            }
+            return response()->json([
+                'status' => true,
+                'message' => $isNewUser ? 'Account created successfully' : 'Login successful',
+                'data' => [
+                    'user' => new UserResource($user),
+                    'is_new_user' => $isNewUser,
+                    'token' => $accessToken
+                ]
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong on the server',
+                'error' => env('APP_DEBUG') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    public function completeProfile(CompleteProfileRequest $request)
+    {
+        try {
+            return DB::transaction(function () use ($request) {
+                $user = $request->user();
+                $user->update([
+                    'first_name' => $request->first_name,
+                    'father_name' => $request->father_name,
+                    'last_name' => $request->last_name,
+                    'phone_number' => $request->phone_number,
+                    'licence_number' => $request->licence_number
+                ]);
+                $user->pharmacies()->updateOrCreate([
+                    'name' => $request->pharmacy_name,
+                    'city_id' => $request->city_id,
+                    'address' => $request->address,
+                ]);
+                $accessToken = $request->bearerToken();
+                Log::info('User registered successfully', ['user_id' => $user->id]);
+                $user->load('pharmacies');
+                return (new RegisterResource($user, $accessToken))
+                    ->response()
+                    ->setStatusCode(200);
+            });
+        } catch (\Exception $e) {
+            Log::error('Error occurred while registering user', [
+                'error' => $e->getMessage()
+            ]);
+            return response()->json([
+                'message' => 'An error occurred while registering the user.'
+            ], 500);
+        }
     }
 }

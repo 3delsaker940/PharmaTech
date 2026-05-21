@@ -16,11 +16,13 @@ class LoginResource extends JsonResource
         return [
             'message' => 'User logged in successfully',
             'user' => [
+                'id' => $this->id,
                 'first_name' => $this->first_name,
                 'father_name' => $this->father_name,
                 'last_name' => $this->last_name,
                 'email' => $this->email,
                 'phone_number' => $this->phone_number,
+                'licence_number' => $this->licence_number,
                 'access_token' => $this->accessToken,
                 'refresh_token' => $this->refreshToken,
                 'token_type' => 'Bearer',
