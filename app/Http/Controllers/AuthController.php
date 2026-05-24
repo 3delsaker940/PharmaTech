@@ -230,11 +230,11 @@ class AuthController extends Controller
             return response()->json(['message' => 'Email already verified'], 200);
         }
         $user->markEmailAsVerified();
-
         if ($request->query('platform') === 'web') {
-            return redirect('http://localhost:5173/login/pharmacist' . '/email-verified?status=success');
+            return redirect(env('FRONTEND_WEB_VERIFIED_URL') . '?status=success');
         }
-        return redirect('pharmacyapp://email-verified?status=success');
+
+        return redirect(env('FRONTEND_APP_VERIFIED_URL') . '?status=success');
     }
 
     public function resendVerificationEmail(Request $request)
@@ -292,17 +292,16 @@ class AuthController extends Controller
         $token = $request->query('token');
         $email = $request->query('email');
         $platform = $request->query('web', 'mobile');
-
         if ($platform === 'web') {
             return redirect(
-                'http://localhost:5173/email-verify'
+                env('FRONTEND_WEB_RESET_URL')
                     . '?token=' . urlencode($token)
                     . '&email=' . urlencode($email)
             );
         }
 
         return redirect(
-            'pharmacyapp://reset-password'
+            env('FRONTEND_APP_RESET_URL')
                 . '?token=' . urlencode($token)
                 . '&email=' . urlencode($email)
         );
@@ -357,16 +356,14 @@ class AuthController extends Controller
             );
 
             $user->load('pharmacies');
-            return response()->json([
-                'status' => true,
-                'message' => $isNewUser ? 'Account created successfully' : 'Login successful',
-                'data' => [
-                    'user' => new UserResource($user),
-                    'is_new_user' => $isNewUser,
-                    'access_token' => $tokens['access_token'],
-                    'refresh_token' => $tokens['refresh_token'],
-                ]
-            ], 200);
+            return (new LoginResource(
+                $user,
+                $tokens['access_token'],
+                $tokens['refresh_token']
+            ))->additional([
+                'is_new_user' => $isNewUser,
+                'message' => $isNewUser ? 'Account created successfully' : 'Login successful'
+            ])->response()->setStatusCode(200);
         } catch (\Throwable  $e) {
             return response()->json([
                 'message' => 'Something went wrong on the server',
