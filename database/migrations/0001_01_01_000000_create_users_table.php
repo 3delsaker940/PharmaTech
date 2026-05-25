@@ -23,6 +23,9 @@ return new class extends Migration
             $table->string('licence_number')->nullable();
             $table->string('google_id')->nullable();
             $table->string('avatar')->nullable();
+            $table->string('remember_token')->nullable();
+            $table->enum('status', ['active', 'suspended', 'inactive'])->default('active');
+            $table->timestamp('last_login_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

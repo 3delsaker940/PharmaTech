@@ -11,6 +11,9 @@ class Governorate extends Model
     use HasTranslations;
     protected $fillable = ['name'];
     public $translatable = ['name'];
+    protected $casts = [
+        'name' => 'array',
+    ];
     public function cities(): HasMany
     {
         return $this->hasMany(City::class);
