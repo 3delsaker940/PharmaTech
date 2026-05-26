@@ -12,6 +12,9 @@ class City extends Model
     use HasTranslations;
     protected $fillable = ['name', 'governorate_id'];
     public $translatable = ['name'];
+    protected $casts = [
+        'name' => 'array',
+    ];
     public function governorate(): BelongsTo
     {
         return $this->belongsTo(Governorate::class);

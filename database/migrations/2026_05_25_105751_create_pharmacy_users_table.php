@@ -23,6 +23,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['pharmacy_id', 'user_id']);
+            $table->index(['pharmacy_id', 'status']);
         });
     }
 
