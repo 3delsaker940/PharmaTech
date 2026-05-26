@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\PharmacyStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,7 +12,7 @@ class Pharmacy extends Model
 {
     protected $guarded = [];
     protected $casts = [
-        'status' => 'string',
+        'status' => PharmacyStatus::class,
     ];
 
     public function governorate(): BelongsTo
@@ -32,7 +33,7 @@ class Pharmacy extends Model
             ->withPivot(['membership_role', 'status', 'invited_by', 'joined_at'])
             ->withTimestamps();
     }
-    public function memberships(): HasMany
+    public function pharmacyUsers(): HasMany
     {
         return $this->hasMany(PharmacyUser::class);
     }

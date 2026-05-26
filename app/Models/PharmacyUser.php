@@ -2,21 +2,16 @@
 
 namespace App\Models;
 
+use App\Enums\PharmacyUserStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PharmacyUser extends Model
 {
-    protected $fillable = [
-        'pharmacy_id',
-        'user_id',
-        'membership_role',
-        'status',
-        'invited_by',
-        'joined_at',
-    ];
+    protected $guarded = [];
 
     protected $casts = [
+        'status'    => PharmacyUserStatus::class,
         'joined_at' => 'datetime',
     ];
 

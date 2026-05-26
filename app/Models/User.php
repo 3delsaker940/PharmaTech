@@ -31,10 +31,14 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function ownedPharmacies(): HasMany
     {
-        return $this->hasMany(Pharmacy::class);
+        return $this->hasMany(Pharmacy::class, 'user_id');
     }
 
-    public function pharmacies(): BelongsToMany
+    public function pharmacies(): HasMany
+    {
+        return $this->ownedPharmacies();
+    }
+    public function staffPharmacies(): BelongsToMany
     {
         return $this->belongsToMany(Pharmacy::class, 'pharmacy_users')
             ->withPivot(['membership_role', 'status', 'invited_by', 'joined_at'])
@@ -46,16 +50,20 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(PharmacyUser::class);
     }
 
-    public function isActiveIn(Pharmacy $pharmacy): bool
+    public function hasPharmacyAccess(int $pharmacyId): bool
     {
+        if ($this->ownedPharmacies()->where('id', $pharmacyId)->exists()) {
+            return true;
+        }
+
         return $this->pharmacyMemberships()
-            ->where('pharmacy_id', $pharmacy->id)
+            ->where('pharmacy_id', $pharmacyId)
             ->where('status', 'active')
             ->exists();
     }
 
-    public function ownsPharmacy(Pharmacy $pharmacy): bool
+    public function ownsPharmacy(int $pharmacyId): bool
     {
-        return $pharmacy->user_id === $this->id;
+        return $this->ownedPharmacies()->where('id', $pharmacyId)->exists();
     }
 }
