@@ -86,7 +86,7 @@ class AuthController extends Controller
                     );
                     Log::info('User registered successfully', ['user_id' => $user->id]);
 
-                    $user->load('pharmacies');
+                    $user->load('pharmacies.city');
                     return (new RegisterResource(
                         $user,
                         $tokens['access_token'],
@@ -140,7 +140,7 @@ class AuthController extends Controller
                 $request->input('device_name', 'auth_token')
             );
 
-            $user->load('pharmacies');
+            $user->load('pharmacies.city');
 
             return (new LoginResource(
                 $user,
@@ -355,7 +355,7 @@ class AuthController extends Controller
                 $request->input('device_name', 'google-login')
             );
 
-            $user->load('pharmacies');
+            $user->load('pharmacies.city');
             return (new LoginResource(
                 $user,
                 $tokens['access_token'],
@@ -391,7 +391,7 @@ class AuthController extends Controller
                 ]);
                 //$accessToken = $request->bearerToken();
                 Log::info('User registered successfully', ['user_id' => $user->id]);
-                $user->load('pharmacies');
+                $user->load('pharmacies.city');
                 return (new RegisterResource($user))
                     ->response()
                     ->setStatusCode(200);
