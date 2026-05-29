@@ -17,7 +17,6 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->enum('status', ['active', 'inactive'])->default('active');
-            $table->timestamps();
 
             $table->unique(['pharmacy_id', 'name']);
             $table->index(['pharmacy_id', 'status']);
