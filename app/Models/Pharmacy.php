@@ -11,9 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Pharmacy extends Model
 {
     protected $guarded = [];
-    protected $casts = [
-        'status' => PharmacyStatus::class,
-    ];
 
     public function governorate(): BelongsTo
     {
