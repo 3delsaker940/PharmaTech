@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use App\Enums\PharmacyUserStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class PharmacyUser extends Model
+class Product extends Model
 {
     protected $guarded = [];
 
     protected $casts = [
-        'joined_at' => 'datetime',
+        'prescription_required' => 'boolean',
     ];
 
     public function pharmacy(): BelongsTo
@@ -19,13 +19,13 @@ class PharmacyUser extends Model
         return $this->belongsTo(Pharmacy::class);
     }
 
-    public function user(): BelongsTo
+    public function category(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Category::class);
     }
 
-    public function invitedBy(): BelongsTo
+    public function medicalInfo(): HasOne
     {
-        return $this->belongsTo(User::class, 'invited_by');
+        return $this->hasOne(ProductMedicalInfo::class);
     }
 }
