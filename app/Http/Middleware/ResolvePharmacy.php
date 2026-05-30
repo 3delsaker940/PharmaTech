@@ -29,8 +29,9 @@ class ResolvePharmacy
         if (! $pharmacy) {
             return response()->json(['message' => 'Pharmacy not found.'], 404);
         }
-
-        if (! $request->user()->hasPharmacyAccess($pharmacy->id)) {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+        if (! $user->hasPharmacyAccess($pharmacy->id)) {
             return response()->json([
                 'message' => 'You do not have access to this pharmacy.',
             ], 403);
