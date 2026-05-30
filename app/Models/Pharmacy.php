@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\PharmacyStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -33,5 +32,19 @@ class Pharmacy extends Model
     public function pharmacyUsers(): HasMany
     {
         return $this->hasMany(PharmacyUser::class);
+    }
+    public function categories(): HasMany
+    {
+        return $this->hasMany(Category::class);
+    }
+
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
+
+    public function suppliers(): HasMany
+    {
+        return $this->hasMany(Supplier::class);
     }
 }
