@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('name');
             $table->foreignId('city_id')->constrained();
             $table->string('address')->nullable();
-            $table->string('phone_number');
+            $table->string('phone_number')->nullable();
             $table->string('license_number')->nullable();
             $table->enum('status', ['active', 'suspended', 'archived', 'pending'])->default('pending');
             $table->timestamps();
