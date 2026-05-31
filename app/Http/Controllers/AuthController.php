@@ -219,22 +219,28 @@ class AuthController extends Controller
     public function verifyEmail($id, $hash, Request $request)
     {
         $request->validate([
-            'platform' => 'required|in:web,mobile'
+            'platform' => 'required|in:web,mobile',
+            't' => 'nullable'
         ]);
         $user = User::findOrFail($id);
 
         if (!hash_equals($hash, sha1($user->email))) {
             return response()->json(['message' => 'Invalid verification link'], 403);
         }
+        $timestamp = $request->query('t', time());
+
         if ($user->hasVerifiedEmail()) {
-            return response()->json(['message' => 'Email already verified'], 200);
+            if ($request->query('platform') === 'web') {
+                return redirect(env('FRONTEND_WEB_VERIFIED_URL') . '?status=already_verified&email=' . urlencode($user->email) . '&t=' . $timestamp);
+            }
+            return redirect(env('FRONTEND_APP_VERIFIED_URL') . '?status=already_verified&email=' . urlencode($user->email) . '&t=' . $timestamp);
         }
         $user->markEmailAsVerified();
         if ($request->query('platform') === 'web') {
-            return redirect(env('FRONTEND_WEB_VERIFIED_URL') . '?status=success');
+            return redirect(env('FRONTEND_WEB_VERIFIED_URL') . '?status=success&email=' . urlencode($user->email) . '&t=' . $timestamp);
         }
 
-        return redirect(env('FRONTEND_APP_VERIFIED_URL') . '?status=success');
+        return redirect(env('FRONTEND_APP_VERIFIED_URL') . '?status=success&email=' . urlencode($user->email) . '&t=' . $timestamp);
     }
 
     public function resendVerificationEmail(Request $request)
