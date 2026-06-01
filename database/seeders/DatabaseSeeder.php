@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
             ]
         );
+        $user->MarkEmailAsVerified();
 
         Pharmacy::firstOrCreate(
             ['id' => 1],
