@@ -5,7 +5,9 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Console\Scheduling\Schedule;
-use App\Http\Middleware\SetAppLocale;;
+use App\Http\Middleware\SetAppLocale;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -27,6 +29,26 @@ return Application::configure(basePath: dirname(__DIR__))
             'resolve.pharmacy' => ResolvePharmacy::class,
         ]);
     })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        //
+    ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->render(function (NotFoundHttpException $e, $request) {
+            if ($request->is('api/*')) {
+                $previous = $e->getPrevious();
+                if ($previous instanceof ModelNotFoundException) {
+                    $fullModelName = $previous->getModel();
+                    $modelName = class_basename($fullModelName);
+                    $customMessages = [
+                        'Product' => 'Product not found. Please check the product ID and try again.',
+                    ];
+                    $message = $customMessages[$modelName] ?? "The requested {$modelName} does not exist.";
+                    return response()->json([
+                        'status'  => 'error',
+                        'message' => $message
+                    ], 404);
+                }
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Endpoint or resource not found.'
+                ], 404);
+            }
+        });
     })->create();
