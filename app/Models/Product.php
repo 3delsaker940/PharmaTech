@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Product extends Model
 {
@@ -27,5 +29,28 @@ class Product extends Model
     public function medicalInfo(): HasOne
     {
         return $this->hasOne(ProductMedicalInfo::class);
+    }
+    public function stockBatches(): HasMany
+    {
+        return $this->hasMany(StockBatch::class, 'product_id');
+    }
+
+    
+    public function scopeWithTotalQuantity($query)
+    {
+        return $query->withSum('stockBatches as total_quantity_sum', 'quantity_on_hand');
+    }
+
+    protected function totalQuantity(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if (array_key_exists('total_quantity_sum', $this->attributes)) {
+                    return (int) $this->attributes['total_quantity_sum'];
+                }
+
+                return (int) $this->stockBatches()->sum('quantity_on_hand');
+            }
+        );
     }
 }
