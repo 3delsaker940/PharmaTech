@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InventoryController;
 use App\Models\Governorate;
 use App\Http\Resources\GovernorateResource;
 use App\Http\Resources\CityResource;
@@ -59,3 +59,19 @@ Route::post('/password/reset', [AuthController::class, 'resetPassword']);
 //sign in with google
 Route::post('/auth/google', [AuthController::class, 'googleLogin']);
 Route::post('auth/google/complete-profile', [AuthController::class, 'completeProfile'])->middleware('auth:sanctum');
+
+
+Route::get('/pharmacy/products', [InventoryController::class, 'getAllPharmacyProducts'])
+    ->middleware('auth:sanctum')
+    ->middleware('resolve.pharmacy');
+Route::get('/pharmacy/{productId}/stock-batches', [InventoryController::class, 'getProductStockBatches'])
+    ->middleware('auth:sanctum')
+    ->middleware('resolve.pharmacy');
+
+Route::prefix('pharmacy')
+    ->middleware(['auth:sanctum', 'resolve.pharmacy'])
+    ->group(function () {
+        Route::get('/products', [InventoryController::class, 'getAllPharmacyProducts']);
+        Route::get('/{productId}/stock-batches', [InventoryController::class, 'getProductStockBatches']);
+        Route::get('/category/{categoryId}/products', [InventoryController::class, 'getProductsByCategory']);
+    });
