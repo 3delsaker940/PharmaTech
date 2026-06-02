@@ -61,13 +61,6 @@ Route::post('/auth/google', [AuthController::class, 'googleLogin']);
 Route::post('auth/google/complete-profile', [AuthController::class, 'completeProfile'])->middleware('auth:sanctum');
 
 
-Route::get('/pharmacy/products', [InventoryController::class, 'getAllPharmacyProducts'])
-    ->middleware('auth:sanctum')
-    ->middleware('resolve.pharmacy');
-Route::get('/pharmacy/{productId}/stock-batches', [InventoryController::class, 'getProductStockBatches'])
-    ->middleware('auth:sanctum')
-    ->middleware('resolve.pharmacy');
-
 Route::prefix('pharmacy')
     ->middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
