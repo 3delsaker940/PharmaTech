@@ -8,6 +8,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use App\Http\Middleware\SetAppLocale;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Http\Request;
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -30,6 +31,21 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->render(function (\Illuminate\Routing\Exceptions\InvalidSignatureException $e, Request $request) {
+            $timestamp = $request->query('t', time());
+            if ($request->query('platform') === 'web') {
+                return redirect(
+                    env('FRONTEND_WEB_VERIFIED_URL')
+                        . '?status=invalid_link&t='
+                        . $timestamp
+                );
+            }
+            return redirect(
+                env('FRONTEND_APP_VERIFIED_URL')
+                    . '?status=invalid_link&t='
+                    . $timestamp
+            );
+        });
         $exceptions->render(function (NotFoundHttpException $e, $request) {
             if ($request->is('api/*')) {
                 $previous = $e->getPrevious();
