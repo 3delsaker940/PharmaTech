@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('pharmacy_id')->nullable()->constrained()->nullOnDelete();
             $table->string('first_name');
             $table->string('father_name')->nullable();
             $table->string('last_name');
@@ -20,7 +21,6 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
             $table->string('phone_number')->nullable();
-            $table->string('licence_number')->nullable();
             $table->string('google_id')->nullable();
             $table->string('avatar')->nullable();
             $table->enum('status', ['active', 'suspended', 'inactive'])->default('active');

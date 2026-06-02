@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Pharmacy;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,24 +15,13 @@ class ResolvePharmacy
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $pharmacyId = $request->header('X-Pharmacy-ID');
-
-        if (! $pharmacyId || ! ctype_digit((string) $pharmacyId)) {
-            return response()->json([
-                'message' => 'Missing or invalid X-Pharmacy-ID header.',
-            ], 422);
-        }
-
-        $pharmacy = Pharmacy::find((int) $pharmacyId);
-
-        if (! $pharmacy) {
-            return response()->json(['message' => 'Pharmacy not found.'], 404);
-        }
         /** @var \App\Models\User $user */
         $user = $request->user();
-        if (! $user->hasPharmacyAccess($pharmacy->id)) {
+        $pharmacy = $user->pharmacy;
+
+        if (! $pharmacy) {
             return response()->json([
-                'message' => 'You do not have access to this pharmacy.',
+                'message' => 'No pharmacy associated with your account.',
             ], 403);
         }
 

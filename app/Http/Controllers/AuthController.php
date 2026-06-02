@@ -4,13 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CompleteProfileRequest;
 use App\Http\Requests\RegisterRequest;
+use App\Models\Pharmacy;
 use Illuminate\Http\Request;
 use App\Http\Requests\ResetPasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RefreshTokenRequest;
 use App\Http\Resources\RegisterResource;
 use App\Http\Resources\LoginResource;
-use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Services\Auth\RefreshTokenService;
 use Illuminate\Support\Facades\Log;
@@ -63,20 +63,22 @@ class AuthController extends Controller
                         'email' => $request->email,
                         'name' =>  $request->first_name . ' ' . $request->father_name . ' ' . $request->last_name
                     ]);
+                    $pharmacy = Pharmacy::create([
+                        'name'           => $request->pharmacy_name,
+                        'city_id'        => $request->city_id,
+                        'address'        => $request->address,
+                        'phone_number'   => $request->phone_number,
+                        'license_number' => $request->licence_number,
+                        'status'         => 'active',
+                    ]);
                     $user = User::create([
+                        'pharmacy_id'    => $pharmacy->id,
                         'email' => $request->email,
                         'password' => $request->password,
                         'first_name' => $request->first_name,
                         'father_name' => $request->father_name,
                         'last_name' => $request->last_name,
                         'phone_number' => $request->phone_number,
-                        'licence_number' => $request->licence_number,
-                    ]);
-                    $user->pharmacies()->create([
-                        'name' => $request->pharmacy_name,
-                        // 'governorate_id' => $request->governorate_id,
-                        'city_id' => $request->city_id,
-                        'address' => $request->address,
                     ]);
                     $user->sendEmailVerificationNotification();
                     $tokens = $this->issueTokenPair(
@@ -86,7 +88,7 @@ class AuthController extends Controller
                     );
                     Log::info('User registered successfully', ['user_id' => $user->id]);
 
-                    $user->load('pharmacies.city');
+                    $user->load('pharmacy.city');
                     return (new RegisterResource(
                         $user,
                         $tokens['access_token'],
@@ -140,7 +142,7 @@ class AuthController extends Controller
                 $request->input('device_name', 'auth_token')
             );
 
-            $user->load('pharmacies.city');
+            $user->load('pharmacy.city');
 
             return (new LoginResource(
                 $user,
@@ -361,7 +363,7 @@ class AuthController extends Controller
                 $request->input('device_name', 'google-login')
             );
 
-            $user->load('pharmacies.city');
+            $user->load('pharmacy.city');
             return (new LoginResource(
                 $user,
                 $tokens['access_token'],
@@ -383,21 +385,34 @@ class AuthController extends Controller
         try {
             return DB::transaction(function () use ($request) {
                 $user = $request->user();
+                if ($user->pharmacy_id) {
+                    $user->pharmacy->update([
+                        'name'           => $request->pharmacy_name,
+                        'city_id'        => $request->city_id,
+                        'address'        => $request->address,
+                        'phone_number'   => $request->phone_number,
+                        'license_number' => $request->licence_number,
+                    ]);
+                } else {
+                    $pharmacy = Pharmacy::create([
+                        'name'           => $request->pharmacy_name,
+                        'city_id'        => $request->city_id,
+                        'address'        => $request->address,
+                        'phone_number'   => $request->phone_number,
+                        'license_number' => $request->licence_number,
+                        'status'         => 'active',
+                    ]);
+
+                    $user->pharmacy_id = $pharmacy->id;
+                }
                 $user->update([
                     'first_name' => $request->first_name,
                     'father_name' => $request->father_name,
                     'last_name' => $request->last_name,
                     'phone_number' => $request->phone_number,
-                    'licence_number' => $request->licence_number
                 ]);
-                $user->pharmacies()->updateOrCreate([
-                    'name' => $request->pharmacy_name,
-                    'city_id' => $request->city_id,
-                    'address' => $request->address,
-                ]);
-                //$accessToken = $request->bearerToken();
                 Log::info('User registered successfully', ['user_id' => $user->id]);
-                $user->load('pharmacies.city');
+                $user->load('pharmacy.city');
                 return (new RegisterResource($user))
                     ->response()
                     ->setStatusCode(200);

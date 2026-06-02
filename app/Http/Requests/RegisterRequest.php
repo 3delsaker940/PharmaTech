@@ -38,7 +38,6 @@ class RegisterRequest extends FormRequest
             // 'governorate_id' => ['required', 'exists:governorates,id'],
             'city_id' => ['required', 'exists:cities,id'],
             'address' => ['nullable', 'string', 'max:255', 'sometimes'],
-            'licence_number' => ['required', 'string', 'max:255']
         ];
     }
 }

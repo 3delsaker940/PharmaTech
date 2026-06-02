@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Models\City;
 
 class LoginResource extends JsonResource
 {
@@ -20,7 +19,7 @@ class LoginResource extends JsonResource
     }
     public function toArray(Request $request): array
 {
-    $pharmacy = $this->pharmacies->first();
+    $pharmacy = $this->pharmacy;
 
     return [
         'message' => 'User logged in successfully',
@@ -32,7 +31,6 @@ class LoginResource extends JsonResource
             'last_name' => $this->last_name,
             'email' => $this->email,
             'phone_number' => $this->phone_number,
-            'licence_number' => $this->licence_number,
             'avatar'         => $this->avatar,
             'is_verified'    => (bool) $this->email_verified_at,
         ],
@@ -44,6 +42,7 @@ class LoginResource extends JsonResource
             'city_id' => $pharmacy->city_id,
             'address' => $pharmacy->address,
             'license_number' => $pharmacy->license_number,
+            'status'         => $pharmacy->status,
         ] : null,
 
         'access_token' => $this->accessToken,
