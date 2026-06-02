@@ -18,10 +18,19 @@ return new class extends Migration
             $table->enum('status', ['active', 'suspended', 'archived', 'pending'])->default('pending');
             $table->timestamps();
         });
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreign('pharmacy_id')
+                ->references('id')
+                ->on('pharmacies')
+                ->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['pharmacy_id']);
+        });
         Schema::dropIfExists('pharmacies');
     }
 };
