@@ -11,13 +11,13 @@ class UserResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'pharmacy_id' => $this->pharmacy_id,
             'first_name' => $this->first_name,
             'father_name' => $this->father_name,
             'last_name' => $this->last_name,
             'email' => $this->email,
             'avatar' => $this->avatar,
             'phone_number' => $this->phone_number,
-            'licence_number' => $this->licence_number,
             'status' => $this->status,
             'is_verified' => (bool) $this->email_verified_at,
             'last_login_at' => $this->last_login_at,

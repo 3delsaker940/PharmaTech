@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use App\Models\City;
 
 class RegisterResource extends JsonResource
 {
@@ -20,7 +19,7 @@ class RegisterResource extends JsonResource
 
     public function toArray(Request $request): array
     {
-        $pharmacy = $this->pharmacies->first();
+        $pharmacy = $this->pharmacy;
 
         return [
             'message' => 'User registered successfully. Please check your email for verification link.',
@@ -31,7 +30,6 @@ class RegisterResource extends JsonResource
                 'last_name' => $this->last_name,
                 'email' => $this->email,
                 'phone_number' => $this->phone_number,
-                'licence_number' => $this->licence_number,
             ],
             'pharmacy' =>$pharmacy ? [
                 'id' => $pharmacy->id,
@@ -39,6 +37,8 @@ class RegisterResource extends JsonResource
                 'governorate_id' => $pharmacy->city?->governorate_id,
                 'city_id' => $pharmacy->city_id,
                 'address' => $pharmacy->address,
+                'license_number' => $pharmacy->license_number,
+                'status'         => $pharmacy->status,
             ]: null,
             'token' => $this->accessToken,
             'refresh_token' => $this->refreshToken,

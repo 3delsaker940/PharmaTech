@@ -27,7 +27,6 @@ class CompleteProfileRequest extends FormRequest
             'pharmacy_name' => ['required', 'string', 'max:255'],
             'city_id' => ['required', 'exists:cities,id'],
             'address' => ['nullable', 'string', 'max:255', 'sometimes'],
-            'licence_number' => ['required', 'string', 'max:255']
         ];
     }
 }
