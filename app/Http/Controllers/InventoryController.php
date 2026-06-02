@@ -9,7 +9,7 @@ class InventoryController extends Controller
 {
     public function getAllPharmacyProducts(Request $request)
     {
-        $pharmacyId = $request->header('X-Pharmacy-ID');
+        $pharmacyId = $request->attributes->get('pharmacy')->id;
         $products = Product::where('pharmacy_id', $pharmacyId)
             ->withTotalQuantity()
             ->get();
@@ -17,8 +17,8 @@ class InventoryController extends Controller
     }
     public function getProductStockBatches(Request $request, $productId)
     {
-        $pharmacy = $request->attributes->get('pharmacy');
-        $product = Product::where('pharmacy_id', $pharmacy->id)
+        $pharmacyId = $request->attributes->get('pharmacy')->id;
+        $product = Product::where('pharmacy_id', $pharmacyId)
             ->where('id', $productId)
             ->firstOrFail();
         $stockBatches = $product->stockBatches;
@@ -27,7 +27,7 @@ class InventoryController extends Controller
 
     public function getProductsByCategory(Request $request, $categoryId)
     {
-        $pharmacyId = $request->header('X-Pharmacy-ID');
+        $pharmacyId = $request->attributes->get('pharmacy')->id;
         $products = Product::where('pharmacy_id', $pharmacyId)
             ->where('category_id', $categoryId)
             ->withTotalQuantity()
