@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CategoryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -67,4 +68,15 @@ Route::prefix('pharmacy')
         Route::get('/products', [InventoryController::class, 'getAllPharmacyProducts']);
         Route::get('/{productId}/stock-batches', [InventoryController::class, 'getProductStockBatches']);
         Route::get('/category/{categoryId}/products', [InventoryController::class, 'getProductsByCategory']);
+    });
+
+Route::prefix('categories')
+    ->middleware(['auth:sanctum', 'resolve.pharmacy'])
+    ->group(function () {
+        Route::get('',                         [CategoryController::class, 'index']);
+        Route::post('',                        [CategoryController::class, 'store']);
+        Route::get('{category}',              [CategoryController::class, 'show']);
+        Route::put('{category}',              [CategoryController::class, 'update']);
+        Route::patch('{category}/deactivate', [CategoryController::class, 'deactivate']);
+        Route::patch('{category}/activate',   [CategoryController::class, 'activate']);
     });
