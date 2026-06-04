@@ -24,6 +24,7 @@ return new class extends Migration
             $table->decimal('tax_rate', 5, 2)->default(0.00);
             $table->decimal('discount_rate', 5, 2)->default(0.00);
             $table->unsignedInteger('min_stock')->default(0);
+            $table->string('image_path')->nullable();
             $table->enum('status', ['active', 'inactive', 'discontinued'])->default('active');
             $table->timestamps();
 
