@@ -18,24 +18,9 @@ class DatabaseSeeder extends Seeder
             LocationSeeder::class,
         ]);
 
-        $user = User::firstOrCreate(
-            ['email' => '3delsaker940@gmail.com'],
-            [
-                'first_name' => 'Adel',
-                'father_name' => 'Giath',
-                'last_name' => 'Saker',
-                'phone_number' => '0935542610',
-                'licence_number' => '188235499',
-                'password' => Hash::make('Password123'),
-                'status' => 'active',
-            ]
-        );
-        $user->MarkEmailAsVerified();
-
-        Pharmacy::firstOrCreate(
+        $pharmacy = Pharmacy::firstOrCreate(
             ['id' => 1],
             [
-                'user_id' => $user->id,
                 'name' => 'Soso Pharma',
                 'city_id' => 1,
                 'address' => 'next to alakram mosque',
@@ -44,6 +29,20 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
             ]
         );
+
+        $user = User::firstOrCreate(
+            ['email' => '3delsaker940@gmail.com'],
+            [
+                'first_name' => 'Adel',
+                'father_name' => 'Giath',
+                'last_name' => 'Saker',
+                'phone_number' => '0935542610',
+                'password' => Hash::make('Password123'),
+                'status' => 'active',
+                'pharmacy_id' => $pharmacy->id,
+            ]
+        );
+        $user->markEmailAsVerified();
 
         $this->call([
             CategorySeeder::class,
