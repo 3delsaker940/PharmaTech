@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductMedicalInfoController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -79,4 +81,19 @@ Route::prefix('categories')
         Route::put('{category}',              [CategoryController::class, 'update']);
         Route::patch('{category}/deactivate', [CategoryController::class, 'deactivate']);
         Route::patch('{category}/activate',   [CategoryController::class, 'activate']);
+    });
+
+Route::prefix('products')
+    ->middleware(['auth:sanctum', 'resolve.pharmacy'])
+    ->group(function () {
+        Route::get('barcode/{barcode}',         [ProductController::class, 'lookupByBarcode']);
+        Route::get('',                           [ProductController::class, 'index']);
+        Route::post('',                          [ProductController::class, 'store']);
+        Route::get('{product}',                 [ProductController::class, 'show']);
+        Route::put('{product}',                 [ProductController::class, 'update']);
+        Route::delete('{product}',              [ProductController::class, 'destroy']);
+        Route::patch('{product}/restore',       [ProductController::class, 'restore'])->withTrashed();
+
+        Route::get('/{product}/medical-info',    [ProductMedicalInfoController::class, 'show']);
+        Route::put('{product}/medical-info',    [ProductMedicalInfoController::class, 'upsert']);
     });

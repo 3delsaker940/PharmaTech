@@ -14,7 +14,7 @@ class ProductSeeder extends Seeder
             [
                 'pharmacy_id' => 1,
                 'category_id' => 1, // Analgesics
-                'barcode' => '6281100112233',
+                'barcode' => '10',
                 'brand_name' => 'Panadol Extra',
                 'scientific_name' => 'Paracetamol / Caffeine',
                 'prescription_required' => false,
@@ -23,14 +23,13 @@ class ProductSeeder extends Seeder
                 'tax_rate' => 0.00,
                 'discount_rate' => 0.00,
                 'min_stock' => 10,
-                'status' => 'active',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
                 'pharmacy_id' => 1,
                 'category_id' => 2, // Antibiotics (تم التصحيح)
-                'barcode' => '6281100112244',
+                'barcode' => '11',
                 'brand_name' => 'Amoxil 500mg',
                 'scientific_name' => 'Amoxicillin',
                 'prescription_required' => true,
@@ -39,14 +38,13 @@ class ProductSeeder extends Seeder
                 'tax_rate' => 0.00,
                 'discount_rate' => 0.00,
                 'min_stock' => 5,
-                'status' => 'active',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
                 'pharmacy_id' => 1,
                 'category_id' => 3, // Vitamins
-                'barcode' => '6281100112255',
+                'barcode' => '12',
                 'brand_name' => 'Centrum Lutein',
                 'scientific_name' => 'Multivitamins / Minerals',
                 'prescription_required' => false,
@@ -55,14 +53,13 @@ class ProductSeeder extends Seeder
                 'tax_rate' => 0.00,
                 'discount_rate' => 0.00,
                 'min_stock' => 3,
-                'status' => 'active',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
                 'pharmacy_id' => 1,
                 'category_id' => 4, // Chronic Diseases
-                'barcode' => '6281100112266',
+                'barcode' => '13',
                 'brand_name' => 'Concor 5mg',
                 'scientific_name' => 'Bisoprolol',
                 'prescription_required' => true,
@@ -71,14 +68,13 @@ class ProductSeeder extends Seeder
                 'tax_rate' => 0.00,
                 'discount_rate' => 0.00,
                 'min_stock' => 15,
-                'status' => 'active',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
                 'pharmacy_id' => 1,
                 'category_id' => 2, // Antibiotics
-                'barcode' => '6281100112277',
+                'barcode' => '14',
                 'brand_name' => 'Augmentin 1g',
                 'scientific_name' => 'Amoxicillin / Clavulanate Potassium',
                 'prescription_required' => true,
@@ -87,7 +83,6 @@ class ProductSeeder extends Seeder
                 'tax_rate' => 0.00,
                 'discount_rate' => 0.00,
                 'min_stock' => 8,
-                'status' => 'active',
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ]

@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Product extends Model
 {
+    use SoftDeletes;
     protected $guarded = [];
 
     protected $casts = [
@@ -35,7 +37,7 @@ class Product extends Model
         return $this->hasMany(StockBatch::class, 'product_id');
     }
 
-    
+
     public function scopeWithTotalQuantity($query)
     {
         return $query->withSum('stockBatches as total_quantity_sum', 'quantity_on_hand');
