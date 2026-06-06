@@ -24,13 +24,16 @@ return new class extends Migration
             $table->decimal('tax_rate', 5, 2)->default(0.00);
             $table->decimal('discount_rate', 5, 2)->default(0.00);
             $table->unsignedInteger('min_stock')->default(0);
+            $table->string('base_unit')->default('box');
+            $table->string('selling_unit')->default('piece');
+            $table->unsignedInteger('units_per_base')->default(1);
+            $table->boolean('allow_partial_selling')->default(false);
             $table->string('image_path')->nullable();
-            $table->enum('status', ['active', 'inactive', 'discontinued'])->default('active');
+            $table->softDeletes();
             $table->timestamps();
 
             $table->unique(['pharmacy_id', 'barcode']);
 
-            $table->index(['pharmacy_id', 'status']);
             $table->index(['pharmacy_id', 'category_id']);
             $table->index('barcode');
         });
