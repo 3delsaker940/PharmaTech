@@ -3,6 +3,7 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -96,4 +97,15 @@ Route::prefix('products')
 
         Route::get('/{product}/medical-info',    [ProductMedicalInfoController::class, 'show']);
         Route::put('{product}/medical-info',    [ProductMedicalInfoController::class, 'upsert']);
+    });
+
+Route::prefix('suppliers')
+    ->middleware(['auth:sanctum', 'resolve.pharmacy'])
+    ->group(function () {
+        Route::get('',                          [SupplierController::class, 'index']);
+        Route::post('',                         [SupplierController::class, 'store']);
+        Route::get('{supplier}',               [SupplierController::class, 'show']);
+        Route::put('{supplier}',               [SupplierController::class, 'update']);
+        Route::patch('{supplier}/deactivate',  [SupplierController::class, 'deactivate']);
+        Route::patch('{supplier}/activate',    [SupplierController::class, 'activate']);
     });
