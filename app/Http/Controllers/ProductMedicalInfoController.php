@@ -41,4 +41,15 @@ class ProductMedicalInfoController extends Controller
             ->response()
             ->setStatusCode($statusCode);
     }
+
+    public function destroy(Request $request, Product $product): JsonResponse
+    {
+        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+
+        $product->medicalInfo()?->delete();
+
+        return response()->json([
+            'message' => 'Medical info deleted successfully.',
+        ], 200);
+    }
 }

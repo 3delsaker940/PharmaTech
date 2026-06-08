@@ -97,6 +97,7 @@ Route::prefix('products')
 
         Route::get('/{product}/medical-info',    [ProductMedicalInfoController::class, 'show']);
         Route::put('{product}/medical-info',    [ProductMedicalInfoController::class, 'upsert']);
+        Route::delete('{product}/medical-info', [ProductMedicalInfoController::class, 'destroy']);
     });
 
 Route::prefix('suppliers')
