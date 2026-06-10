@@ -30,7 +30,6 @@ class SupplierService
     {
         return Supplier::create([
             'pharmacy_id' => $pharmacy->id,
-            'status'      => 'active',
             ...$data,
         ]);
     }
