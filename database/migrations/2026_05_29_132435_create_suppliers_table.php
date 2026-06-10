@@ -19,13 +19,13 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->text('address')->nullable();
             $table->text('notes')->nullable();
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->softDeletes();
             $table->timestamps();
 
             $table->unique(['pharmacy_id', 'name']);
 
-            $table->index(['pharmacy_id', 'status']);
             $table->index(['pharmacy_id', 'name']);
+            $table->index(['pharmacy_id', 'deleted_at']);
         });
     }
 

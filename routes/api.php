@@ -107,6 +107,6 @@ Route::prefix('suppliers')
         Route::post('',                         [SupplierController::class, 'store']);
         Route::get('{supplier}',               [SupplierController::class, 'show']);
         Route::put('{supplier}',               [SupplierController::class, 'update']);
-        Route::patch('{supplier}/deactivate',  [SupplierController::class, 'deactivate']);
-        Route::patch('{supplier}/activate',    [SupplierController::class, 'activate']);
+        Route::delete('{supplier}',        [SupplierController::class, 'destroy']);
+        Route::patch('{supplier}/restore', [SupplierController::class, 'restore'])->withTrashed();
     });
