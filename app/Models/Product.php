@@ -16,6 +16,7 @@ class Product extends Model
 
     protected $casts = [
         'prescription_required' => 'boolean',
+        'allow_partial_selling' => 'boolean',
     ];
 
     public function pharmacy(): BelongsTo
@@ -25,7 +26,7 @@ class Product extends Model
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class)->withTrashed();
     }
 
     public function medicalInfo(): HasOne

@@ -25,16 +25,16 @@ class ProductResource extends JsonResource
             'tax_rate' => $this->tax_rate,
             'discount_rate' => $this->discount_rate,
             'min_stock' => $this->min_stock,
-            'deleted_at' => $this->deleted_at,
-            'category'=> new CategoryResource($this->whenLoaded('category')),
-            'medical_info' => new ProductMedicalInfoResource($this->whenLoaded('medicalInfo')),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
             'base_unit' => $this->base_unit,
             'selling_unit' => $this->selling_unit,
             'units_per_base' => $this->units_per_base,
             'allow_partial_selling' => $this->allow_partial_selling,
             'image_path'=>$this->image_path,
+            'deleted_at' => $this->deleted_at,
+            'category'=> new CategoryResource($this->whenLoaded('category')),
+            'medical_info' => new ProductMedicalInfoResource($this->whenLoaded('medicalInfo')),
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

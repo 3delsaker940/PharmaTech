@@ -31,7 +31,7 @@ class StoreProductRequest extends FormRequest
                 'integer',
                 Rule::exists('categories', 'id')
                     ->where('pharmacy_id', $pharmacyId)
-                    ->where('status', 'active'),
+                    ->whereNull('deleted_at'),
             ],
             'barcode' => [
                 'required',
@@ -59,7 +59,7 @@ class StoreProductRequest extends FormRequest
     {
         return [
             'barcode.unique' => 'This barcode is already used by another product in this pharmacy.',
-            'category_id.exists' => 'The selected category does not exist or is inactive.',
+            'category_id.exists' => 'The selected category does not exist or has been deleted.',
         ];
     }
 }
