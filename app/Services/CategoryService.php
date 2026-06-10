@@ -10,15 +10,17 @@ class CategoryService
 {
     public function list(Pharmacy $pharmacy, array $filters = []): LengthAwarePaginator
     {
-        return Category::query()
-            ->where('pharmacy_id', $pharmacy->id)
+        $query = Category::query()
+            ->where('pharmacy_id', $pharmacy->id);
+
+        if (! empty($filters['with_trashed'])) {
+            $query->withTrashed();
+        }
+
+        return $query
             ->when(
                 filled($filters['search'] ?? null),
                 fn ($q) => $q->where('name', 'like', '%' . $filters['search'] . '%')
-            )
-            ->when(
-                filled($filters['status'] ?? null),
-                fn ($q) => $q->where('status', $filters['status'])
             )
             ->withCount('products')
             ->latest()
@@ -31,7 +33,6 @@ class CategoryService
             'pharmacy_id' => $pharmacy->id,
             'name'        => $data['name'],
             'description' => $data['description'] ?? null,
-            'status'      => 'active',
         ]);
     }
 
@@ -42,16 +43,14 @@ class CategoryService
         return $category->fresh();
     }
 
-    public function deactivate(Category $category): Category
+    public function delete(Category $category): void
     {
-        $category->update(['status' => 'inactive']);
-
-        return $category->fresh();
+        $category->delete();
     }
 
-    public function activate(Category $category): Category
+    public function restore(Category $category): Category
     {
-        $category->update(['status' => 'active']);
+        $category->restore();
 
         return $category->fresh();
     }
