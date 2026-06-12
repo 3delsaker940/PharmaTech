@@ -68,7 +68,20 @@ class StockService
 
         return $this->removeStock($pharmacy, $user, $data);
     }
-    
+
+    public function bulkAdjustment(Pharmacy $pharmacy, User $user, array $items): array
+    {
+        return DB::transaction(function () use ($pharmacy, $user, $items) {
+            $results = [];
+
+            foreach ($items as $item) {
+                $results[] = $this->manualAdjustment($pharmacy, $user, $item);
+            }
+
+            return $results;
+        });
+    }
+
     private function addStock(Pharmacy $pharmacy, User $user, array $data): array
     {
         $batchNumber = $data['batch_number'] ?? $this->generateBatchNumber($pharmacy->id);
