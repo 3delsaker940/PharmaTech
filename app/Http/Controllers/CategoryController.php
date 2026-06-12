@@ -21,7 +21,7 @@ class CategoryController extends Controller
     {
         $categories = $this->categoryService->list(
             $request->attributes->get('pharmacy'),
-            $request->only(['search', 'status', 'per_page'])
+            $request->only(['search', 'with_trashed', 'per_page'])
         );
 
         return CategoryResource::collection($categories);
@@ -55,21 +55,21 @@ class CategoryController extends Controller
         return new CategoryResource($updated->loadCount('products'));
     }
 
-    public function deactivate(Request $request, Category $category): CategoryResource
+    public function destroy(Request $request, Category $category): JsonResponse
     {
         $this->authorizePharmacyResource($request, $category->pharmacy_id);
 
-        $updated = $this->categoryService->deactivate($category);
+        $this->categoryService->delete($category);
 
-        return new CategoryResource($updated);
+        return response()->json(['message' => 'Category deleted successfully.'], 200);
     }
 
-    public function activate(Request $request, Category $category): CategoryResource
+    public function restore(Request $request, Category $category): CategoryResource
     {
         $this->authorizePharmacyResource($request, $category->pharmacy_id);
 
-        $updated = $this->categoryService->activate($category);
+        $restored = $this->categoryService->restore($category);
 
-        return new CategoryResource($updated);
+        return new CategoryResource($restored->loadCount('products'));
     }
 }

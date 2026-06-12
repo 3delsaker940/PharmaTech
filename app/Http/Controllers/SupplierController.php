@@ -22,7 +22,7 @@ class SupplierController extends Controller
     {
         $suppliers = $this->supplierService->list(
             $request->attributes->get('pharmacy'),
-            $request->only(['search', 'status', 'per_page'])
+            $request->only(['search', 'with_trashed', 'per_page'])
         );
 
         return SupplierResource::collection($suppliers);
@@ -56,17 +56,21 @@ class SupplierController extends Controller
         return new SupplierResource($updated);
     }
 
-    public function deactivate(Request $request, Supplier $supplier): SupplierResource
+    public function destroy(Request $request, Supplier $supplier): JsonResponse
     {
         $this->authorizePharmacyResource($request, $supplier->pharmacy_id);
 
-        return new SupplierResource($this->supplierService->deactivate($supplier));
+        $this->supplierService->delete($supplier);
+
+        return response()->json(['message' => 'Supplier deleted successfully.'], 200);
     }
 
-    public function activate(Request $request, Supplier $supplier): SupplierResource
+    public function restore(Request $request, Supplier $supplier): SupplierResource
     {
         $this->authorizePharmacyResource($request, $supplier->pharmacy_id);
 
-        return new SupplierResource($this->supplierService->activate($supplier));
+        $restored = $this->supplierService->restore($supplier);
+
+        return new SupplierResource($restored);
     }
 }

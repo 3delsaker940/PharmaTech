@@ -10,15 +10,17 @@ class SupplierService
 {
     public function list(Pharmacy $pharmacy, array $filters = []): LengthAwarePaginator
     {
-        return Supplier::query()
-            ->where('pharmacy_id', $pharmacy->id)
+        $query = Supplier::query()
+            ->where('pharmacy_id', $pharmacy->id);
+
+        if (! empty($filters['with_trashed'])) {
+            $query->withTrashed();
+        }
+
+        return $query
             ->when(
                 filled($filters['search'] ?? null),
                 fn ($q) => $q->where('name', 'like', '%' . $filters['search'] . '%')
-            )
-            ->when(
-                filled($filters['status'] ?? null),
-                fn ($q) => $q->where('status', $filters['status'])
             )
             ->latest()
             ->paginate((int) ($filters['per_page'] ?? 15));
@@ -28,7 +30,6 @@ class SupplierService
     {
         return Supplier::create([
             'pharmacy_id' => $pharmacy->id,
-            'status'      => 'active',
             ...$data,
         ]);
     }
@@ -42,16 +43,14 @@ class SupplierService
         return $supplier->fresh();
     }
 
-    public function deactivate(Supplier $supplier): Supplier
+    public function delete(Supplier $supplier): void
     {
-        $supplier->update(['status' => 'inactive']);
-
-        return $supplier->fresh();
+        $supplier->delete();
     }
 
-    public function activate(Supplier $supplier): Supplier
+    public function restore(Supplier $supplier): Supplier
     {
-        $supplier->update(['status' => 'active']);
+        $supplier->restore();
 
         return $supplier->fresh();
     }

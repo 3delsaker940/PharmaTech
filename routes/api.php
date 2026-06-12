@@ -80,8 +80,8 @@ Route::prefix('categories')
         Route::post('',                        [CategoryController::class, 'store']);
         Route::get('{category}',              [CategoryController::class, 'show']);
         Route::put('{category}',              [CategoryController::class, 'update']);
-        Route::patch('{category}/deactivate', [CategoryController::class, 'deactivate']);
-        Route::patch('{category}/activate',   [CategoryController::class, 'activate']);
+        Route::delete('{category}',        [CategoryController::class, 'destroy']);
+        Route::patch('{category}/restore', [CategoryController::class, 'restore'])->withTrashed();
     });
 
 Route::prefix('products')
@@ -107,6 +107,6 @@ Route::prefix('suppliers')
         Route::post('',                         [SupplierController::class, 'store']);
         Route::get('{supplier}',               [SupplierController::class, 'show']);
         Route::put('{supplier}',               [SupplierController::class, 'update']);
-        Route::patch('{supplier}/deactivate',  [SupplierController::class, 'deactivate']);
-        Route::patch('{supplier}/activate',    [SupplierController::class, 'activate']);
+        Route::delete('{supplier}',        [SupplierController::class, 'destroy']);
+        Route::patch('{supplier}/restore', [SupplierController::class, 'restore'])->withTrashed();
     });

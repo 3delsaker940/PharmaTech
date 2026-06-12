@@ -36,6 +36,7 @@ return new class extends Migration
 
             $table->index(['pharmacy_id', 'category_id']);
             $table->index('barcode');
+            $table->index(['pharmacy_id', 'deleted_at']);
         });
     }
 

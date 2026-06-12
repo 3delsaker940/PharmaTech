@@ -16,11 +16,11 @@ return new class extends Migration
             $table->foreignId('pharmacy_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->softDeletes();
+            $table->timestamps();
 
             $table->unique(['pharmacy_id', 'name']);
-            $table->index(['pharmacy_id', 'status']);
-            $table->timestamps();
+            $table->index(['pharmacy_id', 'deleted_at']);
         });
     }
 
