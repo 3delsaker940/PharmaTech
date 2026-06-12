@@ -38,6 +38,15 @@ class Product extends Model
         return $this->hasMany(StockBatch::class, 'product_id');
     }
 
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    public function purchaseInvoiceItems(): HasMany
+    {
+        return $this->hasMany(PurchaseInvoiceItem::class);
+    }
 
     public function scopeWithTotalQuantity($query)
     {
