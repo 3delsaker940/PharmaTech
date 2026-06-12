@@ -60,6 +60,78 @@ class StockService
             'notes'           => $notes,
         ]);
     }
+    public function manualAdjustment(Pharmacy $pharmacy, User $user, array $data): array
+    {
+        if ($data['adjustment_type'] === 'add') {
+            return $this->addStock($pharmacy, $user, $data);
+        }
+
+        return $this->removeStock($pharmacy, $user, $data);
+    }
+    
+    private function addStock(Pharmacy $pharmacy, User $user, array $data): array
+    {
+        $batchNumber = $data['batch_number'] ?? $this->generateBatchNumber($pharmacy->id);
+
+        $batch = StockBatch::create([
+            'pharmacy_id'         => $pharmacy->id,
+            'product_id'          => $data['product_id'],
+            'purchase_invoice_id' => null,
+            'batch_number'        => $batchNumber,
+            'expiry_date'         => $data['expiry_date'] ?? null,
+            'purchase_price'      => $data['purchase_price'],
+            'selling_price'       => $data['selling_price'],
+            'quantity_on_hand'    => $data['quantity'],
+            'received_at'         => now(),
+            'status'              => 'active',
+        ]);
+
+        $movement = $this->recordMovement(
+            pharmacyId:     $pharmacy->id,
+            productId:      $data['product_id'],
+            batchId:        $batch->id,
+            movementType:   'adjustment_in',
+            quantityChange: $data['quantity'],
+            createdBy:      $user->id,
+            notes:          $data['notes'] ?? 'Manual stock addition',
+        );
+
+        return ['batch' => $batch, 'movement' => $movement];
+    }
+
+    private function removeStock(Pharmacy $pharmacy, User $user, array $data): array
+    {
+        $batch = StockBatch::where('pharmacy_id', $pharmacy->id)
+            ->where('id', $data['batch_id'])
+            ->firstOrFail();
+
+        if ($batch->quantity_on_hand < $data['quantity']) {
+            throw new \InvalidArgumentException(
+                "Cannot remove {$data['quantity']} units. " .
+                "Only {$batch->quantity_on_hand} available in batch {$batch->batch_number}."
+            );
+        }
+
+        $newQuantity = $batch->quantity_on_hand - $data['quantity'];
+
+        $batch->update([
+            'quantity_on_hand' => $newQuantity,
+            'status'           => $newQuantity === 0 ? 'depleted' : $batch->status,
+        ]);
+
+        $movement = $this->recordMovement(
+            pharmacyId:     $pharmacy->id,
+            productId:      $batch->product_id,
+            batchId:        $batch->id,
+            movementType:   'adjustment_out',
+            quantityChange: -$data['quantity'],
+            createdBy:      $user->id,
+            notes:          $data['notes'] ?? 'Manual stock removal',
+        );
+
+        return ['batch' => $batch->fresh(), 'movement' => $movement];
+    }
+
     private function generateBatchNumber(int $pharmacyId): string
     {
         $year   = now()->year;
