@@ -82,6 +82,34 @@ class StockService
         });
     }
 
+    public function reverseBatchesFromCancellation(PurchaseInvoice $invoice, User $user): void
+    {
+        $batches = StockBatch::where('purchase_invoice_id', $invoice->id)->get();
+
+        foreach ($batches as $batch) {
+            $quantityToReverse = $batch->quantity_on_hand;
+
+            $batch->update([
+                'quantity_on_hand' => 0,
+                'status'           => 'inactive',
+            ]);
+
+            if ($quantityToReverse > 0) {
+                $this->recordMovement(
+                    pharmacyId:     $invoice->pharmacy_id,
+                    productId:      $batch->product_id,
+                    batchId:        $batch->id,
+                    movementType:   'adjustment_out',
+                    quantityChange: -$quantityToReverse,
+                    createdBy:      $user->id,
+                    referenceType:  'purchase_invoice',
+                    referenceId:    $invoice->id,
+                    notes:          "Stock reversed — invoice {$invoice->invoice_number} cancelled",
+                );
+            }
+        }
+    }
+
     private function addStock(Pharmacy $pharmacy, User $user, array $data): array
     {
         $batchNumber = $data['batch_number'] ?? $this->generateBatchNumber($pharmacy->id);
