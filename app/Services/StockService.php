@@ -37,6 +37,29 @@ class StockService
             'status'              => 'active',
         ]);
     }
+    public function recordMovement(
+        int $pharmacyId,
+        int $productId,
+        ?int $batchId,
+        string $movementType,
+        int $quantityChange,
+        int $createdBy,
+        ?string $referenceType = null,
+        ?int $referenceId = null,
+        ?string $notes = null
+    ): StockMovement {
+        return StockMovement::create([
+            'pharmacy_id'     => $pharmacyId,
+            'product_id'      => $productId,
+            'batch_id'        => $batchId,
+            'movement_type'   => $movementType,
+            'quantity_change' => $quantityChange,
+            'reference_type'  => $referenceType,
+            'reference_id'    => $referenceId,
+            'created_by'      => $createdBy,
+            'notes'           => $notes,
+        ]);
+    }
     private function generateBatchNumber(int $pharmacyId): string
     {
         $year   = now()->year;
