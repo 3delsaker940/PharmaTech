@@ -4,6 +4,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
 use App\Http\Controllers\PurchaseInvoiceController;
+use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
@@ -131,4 +132,9 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
 
         Route::get('stock-movements', [StockMovementController::class, 'index']);
         Route::get('stock-movements/{stockMovement}',[StockMovementController::class, 'show']);
+
+        Route::get('stock-adjustments', [StockAdjustmentController::class, 'index']);
+        Route::post('stock-adjustments',  [StockAdjustmentController::class, 'store']);
+        Route::post('stock-adjustments/bulk',[StockAdjustmentController::class, 'bulkStore']);
+
     });
