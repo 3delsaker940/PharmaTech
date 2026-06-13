@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CashBoxController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
@@ -136,5 +137,10 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('stock-adjustments', [StockAdjustmentController::class, 'index']);
         Route::post('stock-adjustments',  [StockAdjustmentController::class, 'store']);
         Route::post('stock-adjustments/bulk',[StockAdjustmentController::class, 'bulkStore']);
+
+        Route::get('cash-boxes', [CashBoxController::class, 'index']);
+        Route::post('cash-boxes', [CashBoxController::class, 'store']);
+        Route::get('cash-boxes/{cashBox}', [CashBoxController::class, 'show']);
+        Route::get('cash-boxes/{cashBox}/transactions', [CashBoxController::class, 'transactions']);
 
     });
