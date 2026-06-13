@@ -4,6 +4,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierDebtController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -109,4 +110,11 @@ Route::prefix('suppliers')
         Route::put('{supplier}',               [SupplierController::class, 'update']);
         Route::delete('{supplier}',        [SupplierController::class, 'destroy']);
         Route::patch('{supplier}/restore', [SupplierController::class, 'restore'])->withTrashed();
+    });
+
+Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
+    ->group(function () {
+        Route::get('supplier-debts',                 [SupplierDebtController::class, 'index']);
+        Route::get('supplier-debts/{supplierDebt}',  [SupplierDebtController::class, 'show']);
+
     });
