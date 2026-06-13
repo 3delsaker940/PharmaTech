@@ -17,6 +17,12 @@ class Product extends Model
     protected $casts = [
         'prescription_required' => 'boolean',
         'allow_partial_selling' => 'boolean',
+        'buying_price'          => 'float',
+        'selling_price'         => 'float',
+        'tax_rate'              => 'float',
+        'discount_rate'         => 'float',
+        'units_per_base'        => 'integer',
+        'min_stock'             => 'integer',
     ];
 
     public function pharmacy(): BelongsTo
