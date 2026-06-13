@@ -4,6 +4,8 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
 use App\Http\Controllers\PurchaseInvoiceController;
+use App\Http\Controllers\StockBatchController;
+use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierDebtController;
 use Illuminate\Http\Request;
@@ -123,4 +125,10 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'show']);
         Route::put('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'update']);
         Route::patch('purchase-invoices/{purchaseInvoice}/cancel', [PurchaseInvoiceController::class, 'cancel']);
+
+        Route::get('stock-batches',[StockBatchController::class, 'index']);
+        Route::get('stock-batches/{stockBatch}', [StockBatchController::class, 'show']);
+
+        Route::get('stock-movements', [StockMovementController::class, 'index']);
+        Route::get('stock-movements/{stockMovement}',[StockMovementController::class, 'show']);
     });
