@@ -3,6 +3,7 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
+use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierDebtController;
 use Illuminate\Http\Request;
@@ -117,4 +118,9 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('supplier-debts',                 [SupplierDebtController::class, 'index']);
         Route::get('supplier-debts/{supplierDebt}',  [SupplierDebtController::class, 'show']);
 
+        Route::get('purchase-invoices',                    [PurchaseInvoiceController::class, 'index']);
+        Route::post('purchase-invoices',                   [PurchaseInvoiceController::class, 'store']);
+        Route::get('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'show']);
+        Route::put('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'update']);
+        Route::patch('purchase-invoices/{purchaseInvoice}/cancel', [PurchaseInvoiceController::class, 'cancel']);
     });
