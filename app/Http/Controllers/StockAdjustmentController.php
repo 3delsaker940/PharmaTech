@@ -23,6 +23,10 @@ class StockAdjustmentController extends Controller
         $movements = StockMovement::query()
             ->where('pharmacy_id', $pharmacy->id)
             ->whereIn('movement_type', ['adjustment_in', 'adjustment_out'])
+            ->when(
+                $request->filled('product_id'),
+                fn ($q) => $q->where('product_id', $request->input('product_id'))
+            )
             ->with(['product', 'createdBy', 'batch'])
             ->orderByDesc('created_at')
             ->paginate((int) $request->input('per_page', 15));

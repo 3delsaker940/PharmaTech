@@ -21,8 +21,11 @@ class StockService
         $batchNumber = $itemData['batch_number']
             ?? $this->generateBatchNumber($invoice->pharmacy_id);
 
-        $sellingPrice = $itemData['selling_price']
-            ?? Product::find($item->product_id)->selling_price;
+        $product = Product::find($item->product_id);
+
+        $sellingPrice = $itemData['selling_price'] ?? $product->selling_price;
+
+        $quantityOnHand = $item->quantity * $product->units_per_base;
 
         return StockBatch::create([
             'pharmacy_id'         => $invoice->pharmacy_id,
@@ -32,7 +35,7 @@ class StockService
             'expiry_date'         => $itemData['expiry_date'] ?? null,
             'purchase_price'      => $item->wholesale_price,
             'selling_price'       => $sellingPrice,
-            'quantity_on_hand'    => $item->quantity,
+            'quantity_on_hand'    => $quantityOnHand,
             'received_at'         => now(),
             'status'              => 'active',
         ]);

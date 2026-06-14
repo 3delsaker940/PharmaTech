@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockBatch extends Model
 {
+    protected $guarded = [];
     protected $casts = [
         'expiry_date' => 'date',
         'quantity_on_hand' => 'integer',

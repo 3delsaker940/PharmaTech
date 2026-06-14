@@ -40,7 +40,7 @@ class PurchaseInvoiceService
                 $filters['to_date'] ?? null,
                 fn ($q, $v) => $q->whereDate('invoice_date', '<=', $v)
             )
-            ->with(['supplier', 'createdBy'])
+            ->with(['supplier', 'createdBy', 'supplierDebt'])
             ->orderByDesc('id')
             ->paginate($filters['per_page'] ?? 15);
     }
@@ -116,7 +116,7 @@ class PurchaseInvoiceService
                     productId:      $invoiceItem->product_id,
                     batchId:        $batch->id,
                     movementType:   'purchase_in',
-                    quantityChange: $invoiceItem->quantity,
+                    quantityChange: $batch->quantity_on_hand,
                     createdBy:      $user->id,
                     referenceType:  'purchase_invoice',
                     referenceId:    $invoice->id,

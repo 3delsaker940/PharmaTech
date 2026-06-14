@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\CashBox;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -90,6 +91,22 @@ class StorePurchaseInvoiceRequest extends FormRequest
                     'Amount paid (' . number_format($amountPaid, 2) . ') cannot exceed the invoice grand total (' . number_format($grandTotal, 2) . ').'
                 );
             }
+
+            if ($this->input('payment_method') === 'cash' && $amountPaid > 0) {
+                $pharmacyId = $this->attributes->get('pharmacy')->id;
+
+                $hasActiveCashBox = CashBox::where('pharmacy_id', $pharmacyId)
+                    ->where('status', 'active')
+                    ->exists();
+
+                if (! $hasActiveCashBox) {
+                    $validator->errors()->add(
+                        'payment_method',
+                        'No active cash box found. Open a cash box before recording a cash payment.'
+                    );
+                }
+            }
+
         });
     }
 }

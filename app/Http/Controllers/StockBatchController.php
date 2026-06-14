@@ -33,7 +33,7 @@ class StockBatchController extends Controller
                     ->whereDate('expiry_date', '>=', now())
             )
             ->with('product')
-            ->orderBy('expiry_date')
+            ->orderBy('expiry_date IS NULL, expiry_date ASC')
             ->paginate((int) $request->input('per_page', 15));
 
         return StockBatchResource::collection($batches);
@@ -43,7 +43,7 @@ class StockBatchController extends Controller
     {
         $this->authorizePharmacyResource($request, $stockBatch->pharmacy_id);
 
-        $stockBatch->load(['product', 'purchaseInvoice']);
+        $stockBatch->load('product');
 
         return new StockBatchResource($stockBatch);
     }
