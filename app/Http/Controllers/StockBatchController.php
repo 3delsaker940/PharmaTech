@@ -33,7 +33,7 @@ class StockBatchController extends Controller
                     ->whereDate('expiry_date', '>=', now())
             )
             ->with('product')
-            ->orderBy('expiry_date IS NULL, expiry_date ASC')
+            ->orderByRaw('ISNULL(expiry_date), expiry_date ASC')
             ->paginate((int) $request->input('per_page', 15));
 
         return StockBatchResource::collection($batches);
