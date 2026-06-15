@@ -33,7 +33,6 @@ class StorePurchaseInvoiceRequest extends FormRequest
                 'integer',
                 Rule::exists('suppliers', 'id')
                     ->where('pharmacy_id', $pharmacyId)
-                    ->where('status', 'active')
                     ->where('deleted_at', null),
             ],
             'invoice_date'   => ['required', 'date'],
