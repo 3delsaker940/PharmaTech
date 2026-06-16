@@ -29,6 +29,8 @@ return new class extends Migration
                 ->default('active');
             $table->timestamps();
 
+            $table->unique(['pharmacy_id', 'batch_number']);
+
             $table->index(['pharmacy_id', 'product_id']);
             $table->index(['pharmacy_id', 'status']);
             $table->index(['pharmacy_id', 'expiry_date']);

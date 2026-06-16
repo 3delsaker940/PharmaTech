@@ -44,7 +44,13 @@ class BulkStockAdjustmentRequest extends FormRequest
 
             'items.*.purchase_price' => ['required_if:items.*.adjustment_type,add', 'numeric', 'min:0'],
             'items.*.selling_price'  => ['required_if:items.*.adjustment_type,add', 'numeric', 'min:0'],
-            'items.*.batch_number'   => ['nullable', 'string', 'max:255'],
+            'items.*.batch_number' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('stock_batches', 'batch_number')
+                    ->where('pharmacy_id', $pharmacyId),
+            ],
             'items.*.expiry_date'    => ['nullable', 'date'],
 
             'items.*.batch_id' => [
@@ -106,6 +112,23 @@ class BulkStockAdjustmentRequest extends FormRequest
                         "Cannot remove {$quantity} units. Only {$batch->quantity_on_hand} available in batch {$batch->batch_number}."
                     );
                 }
+            }
+            $batchNumbers = collect($this->input('items', []))
+                ->pluck('batch_number')
+                ->filter()
+                ->values();
+
+            if ($batchNumbers->count() !== $batchNumbers->unique()->count()) {
+                $duplicates = $batchNumbers
+                    ->duplicates()
+                    ->unique()
+                    ->values()
+                    ->implode(', ');
+
+                $validator->errors()->add(
+                    'items',
+                    "Duplicate batch numbers found within the same bulk request: {$duplicates}."
+                );
             }
         });
     }

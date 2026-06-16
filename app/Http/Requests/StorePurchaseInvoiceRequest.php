@@ -53,7 +53,13 @@ class StorePurchaseInvoiceRequest extends FormRequest
             'items.*.tax'             => ['nullable', 'numeric', 'min:0'],
             'items.*.discount'        => ['nullable', 'numeric', 'min:0'],
 
-            'items.*.batch_number'  => ['nullable', 'string', 'max:255'],
+            'items.*.batch_number' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('stock_batches', 'batch_number')
+                    ->where('pharmacy_id', $pharmacyId),
+            ],
             'items.*.expiry_date'   => ['nullable', 'date'],
             'items.*.selling_price' => ['nullable', 'numeric', 'min:0'],
         ];
@@ -105,7 +111,23 @@ class StorePurchaseInvoiceRequest extends FormRequest
                     );
                 }
             }
+            $batchNumbers = collect($this->input('items', []))
+                ->pluck('batch_number')
+                ->filter()
+                ->values();
 
+            if ($batchNumbers->count() !== $batchNumbers->unique()->count()) {
+                $duplicates = $batchNumbers
+                    ->duplicates()
+                    ->unique()
+                    ->values()
+                    ->implode(', ');
+
+                $validator->errors()->add(
+                    'items',
+                    "Duplicate batch numbers found within the same request: {$duplicates}."
+                );
+            }
         });
     }
 }

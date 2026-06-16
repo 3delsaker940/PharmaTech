@@ -42,7 +42,13 @@ class StoreStockAdjustmentRequest extends FormRequest
 
             'purchase_price' => ['required_if:adjustment_type,add', 'numeric', 'min:0'],
             'selling_price'  => ['required_if:adjustment_type,add', 'numeric', 'min:0'],
-            'batch_number'   => ['nullable', 'string', 'max:255'],
+            'batch_number' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('stock_batches', 'batch_number')
+                    ->where('pharmacy_id', $pharmacyId),
+            ],
             'expiry_date'    => ['nullable', 'date'],
 
             'batch_id' => [
