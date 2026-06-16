@@ -56,7 +56,10 @@ class Product extends Model
 
     public function scopeWithTotalQuantity($query)
     {
-        return $query->withSum('stockBatches as total_quantity_sum', 'quantity_on_hand');
+        return $query->withSum(
+            ['stockBatches as total_quantity_sum' => fn ($q) => $q->where('status', 'active')],
+            'quantity_on_hand'
+        );
     }
 
     protected function totalQuantity(): Attribute
@@ -67,7 +70,9 @@ class Product extends Model
                     return (int) $this->attributes['total_quantity_sum'];
                 }
 
-                return (int) $this->stockBatches()->sum('quantity_on_hand');
+                return (int) $this->stockBatches()
+                    ->where('status', 'active')
+                    ->sum('quantity_on_hand');
             }
         );
     }

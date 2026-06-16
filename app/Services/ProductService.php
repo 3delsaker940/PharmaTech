@@ -37,6 +37,7 @@ class ProductService
                     filter_var($filters['prescription_required'], FILTER_VALIDATE_BOOLEAN)
                 )
             )
+            ->withTotalQuantity()
             ->with('category')
             ->latest()
             ->paginate((int) ($filters['per_page'] ?? 15));
