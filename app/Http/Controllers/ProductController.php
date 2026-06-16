@@ -6,6 +6,7 @@ use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
+use App\Http\Resources\StockBatchResource;
 use App\Models\Product;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
@@ -105,5 +106,18 @@ class ProductController extends Controller
             ->paginate((int) $request->input('per_page', 15));
 
         return ProductResource::collection($products);
+    }
+
+    public function availableBatches(Request $request, Product $product): AnonymousResourceCollection
+    {
+        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+
+        $batches = $product->stockBatches()
+            ->where('status', 'active')
+            ->where('quantity_on_hand', '>', 0)
+            ->orderBy('received_at')
+            ->paginate((int) $request->input('per_page', 15));
+
+        return StockBatchResource::collection($batches);
     }
 }
