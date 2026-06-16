@@ -105,7 +105,10 @@ class ProductController extends Controller
                 'quantity_on_hand'
             )
             ->with('category')
-            ->orderByRaw('COALESCE(total_quantity_sum, 0) ASC')
+            ->orderByRaw('COALESCE((SELECT SUM(quantity_on_hand)
+                                 FROM stock_batches
+                                 WHERE product_id = products.id
+                                   AND status = "active"), 0) ASC')
             ->paginate((int) $request->input('per_page', 15));
 
         return ProductResource::collection($products);
