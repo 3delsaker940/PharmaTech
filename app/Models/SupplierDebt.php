@@ -6,30 +6,34 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class StockBatch extends Model
+class SupplierDebt extends Model
 {
     protected $guarded = [];
+
     protected $casts = [
-        'expiry_date' => 'date',
-        'quantity_on_hand' => 'integer',
-        'purchase_price' => 'float',
-        'selling_price' => 'float',
-        'received_at'      => 'datetime',
+        'total_amount'     => 'float',
+        'paid_amount'      => 'float',
+        'remaining_amount' => 'float',
+        'due_date'         => 'date',
     ];
-    public function product(): BelongsTo
-    {
-        return $this->belongsTo(Product::class, 'product_id');
-    }
+
     public function pharmacy(): BelongsTo
     {
         return $this->belongsTo(Pharmacy::class);
     }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
     public function purchaseInvoice(): BelongsTo
     {
         return $this->belongsTo(PurchaseInvoice::class);
     }
-    public function movements(): HasMany
+
+    public function payments(): HasMany
     {
-        return $this->hasMany(StockMovement::class, 'batch_id');
+        return $this->hasMany(SupplierDebtPayment::class);
     }
 }

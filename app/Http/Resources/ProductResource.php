@@ -22,6 +22,7 @@ class ProductResource extends JsonResource
             'prescription_required' => $this->prescription_required,
             'buying_price' => $this->buying_price,
             'selling_price' => $this->selling_price,
+            'total_quantity' => $this->total_quantity,
             'tax_rate' => $this->tax_rate,
             'discount_rate' => $this->discount_rate,
             'min_stock' => $this->min_stock,

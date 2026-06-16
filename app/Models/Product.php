@@ -17,6 +17,12 @@ class Product extends Model
     protected $casts = [
         'prescription_required' => 'boolean',
         'allow_partial_selling' => 'boolean',
+        'buying_price'          => 'float',
+        'selling_price'         => 'float',
+        'tax_rate'              => 'float',
+        'discount_rate'         => 'float',
+        'units_per_base'        => 'integer',
+        'min_stock'             => 'integer',
     ];
 
     public function pharmacy(): BelongsTo
@@ -38,10 +44,22 @@ class Product extends Model
         return $this->hasMany(StockBatch::class, 'product_id');
     }
 
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
+
+    public function purchaseInvoiceItems(): HasMany
+    {
+        return $this->hasMany(PurchaseInvoiceItem::class);
+    }
 
     public function scopeWithTotalQuantity($query)
     {
-        return $query->withSum('stockBatches as total_quantity_sum', 'quantity_on_hand');
+        return $query->withSum(
+            ['stockBatches as total_quantity_sum' => fn ($q) => $q->where('status', 'active')],
+            'quantity_on_hand'
+        );
     }
 
     protected function totalQuantity(): Attribute
@@ -52,7 +70,9 @@ class Product extends Model
                     return (int) $this->attributes['total_quantity_sum'];
                 }
 
-                return (int) $this->stockBatches()->sum('quantity_on_hand');
+                return (int) $this->stockBatches()
+                    ->where('status', 'active')
+                    ->sum('quantity_on_hand');
             }
         );
     }

@@ -6,6 +6,7 @@ use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
+use App\Http\Resources\StockBatchResource;
 use App\Models\Product;
 use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
@@ -88,5 +89,38 @@ class ProductController extends Controller
         }
 
         return (new ProductResource($product))->response();
+    }
+    public function lowStock(Request $request): AnonymousResourceCollection
+    {
+        $pharmacy = $request->attributes->get('pharmacy');
+
+        $products = Product::where('pharmacy_id', $pharmacy->id)
+            ->whereNull('deleted_at')
+            ->whereRaw('COALESCE((SELECT SUM(quantity_on_hand)
+                           FROM stock_batches
+                           WHERE product_id = products.id
+                             AND status = "active"), 0) < min_stock')
+            ->withSum(
+                ['stockBatches as total_quantity_sum' => fn ($q) => $q->where('status', 'active')],
+                'quantity_on_hand'
+            )
+            ->with('category')
+            ->orderByRaw('COALESCE(total_quantity_sum, 0) ASC')
+            ->paginate((int) $request->input('per_page', 15));
+
+        return ProductResource::collection($products);
+    }
+
+    public function availableBatches(Request $request, Product $product): AnonymousResourceCollection
+    {
+        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+
+        $batches = $product->stockBatches()
+            ->where('status', 'active')
+            ->where('quantity_on_hand', '>', 0)
+            ->orderBy('received_at')
+            ->paginate((int) $request->input('per_page', 15));
+
+        return StockBatchResource::collection($batches);
     }
 }

@@ -1,9 +1,15 @@
 <?php
 
+use App\Http\Controllers\CashBoxController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
+use App\Http\Controllers\PurchaseInvoiceController;
+use App\Http\Controllers\StockAdjustmentController;
+use App\Http\Controllers\StockBatchController;
+use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SupplierDebtController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -87,6 +93,8 @@ Route::prefix('categories')
 Route::prefix('products')
     ->middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
+        Route::get('{product}/batches/available', [ProductController::class, 'availableBatches']);
+        Route::get('low-stock', [ProductController::class, 'lowStock']);
         Route::get('barcode/{barcode}',         [ProductController::class, 'lookupByBarcode']);
         Route::get('',                           [ProductController::class, 'index']);
         Route::post('',                          [ProductController::class, 'store']);
@@ -109,4 +117,34 @@ Route::prefix('suppliers')
         Route::put('{supplier}',               [SupplierController::class, 'update']);
         Route::delete('{supplier}',        [SupplierController::class, 'destroy']);
         Route::patch('{supplier}/restore', [SupplierController::class, 'restore'])->withTrashed();
+    });
+
+Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
+    ->group(function () {
+        Route::get('supplier-debts',                 [SupplierDebtController::class, 'index']);
+        Route::get('supplier-debts/{supplierDebt}',  [SupplierDebtController::class, 'show']);
+
+        Route::get('purchase-invoices',                    [PurchaseInvoiceController::class, 'index']);
+        Route::post('purchase-invoices',                   [PurchaseInvoiceController::class, 'store']);
+        Route::get('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'show']);
+        Route::put('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'update']);
+        Route::patch('purchase-invoices/{purchaseInvoice}/cancel', [PurchaseInvoiceController::class, 'cancel']);
+
+        Route::get('stock-batches',[StockBatchController::class, 'index']);
+        Route::get('stock-batches/{stockBatch}', [StockBatchController::class, 'show']);
+        Route::patch('stock-batches/{stockBatch}/mark-expired', [StockBatchController::class, 'markExpired']);
+
+        Route::get('stock-movements', [StockMovementController::class, 'index']);
+        Route::get('stock-movements/{stockMovement}',[StockMovementController::class, 'show']);
+
+        Route::get('stock-adjustments', [StockAdjustmentController::class, 'index']);
+        Route::post('stock-adjustments',  [StockAdjustmentController::class, 'store']);
+        Route::post('stock-adjustments/bulk',[StockAdjustmentController::class, 'bulkStore']);
+
+        Route::get('cash-boxes/active', [CashBoxController::class, 'active']);
+        Route::get('cash-boxes', [CashBoxController::class, 'index']);
+        Route::post('cash-boxes', [CashBoxController::class, 'store']);
+        Route::get('cash-boxes/{cashBox}', [CashBoxController::class, 'show']);
+        Route::get('cash-boxes/{cashBox}/transactions', [CashBoxController::class, 'transactions']);
+
     });
