@@ -132,6 +132,7 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
 
         Route::get('stock-batches',[StockBatchController::class, 'index']);
         Route::get('stock-batches/{stockBatch}', [StockBatchController::class, 'show']);
+        Route::patch('stock-batches/{stockBatch}/mark-expired', [StockBatchController::class, 'markExpired']);
 
         Route::get('stock-movements', [StockMovementController::class, 'index']);
         Route::get('stock-movements/{stockMovement}',[StockMovementController::class, 'show']);

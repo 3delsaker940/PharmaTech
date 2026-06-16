@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Resources\StockBatchResource;
 use App\Models\StockBatch;
+use App\Models\StockMovement;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -42,6 +43,44 @@ class StockBatchController extends Controller
     public function show(Request $request, StockBatch $stockBatch): StockBatchResource
     {
         $this->authorizePharmacyResource($request, $stockBatch->pharmacy_id);
+
+        $stockBatch->load('product');
+
+        return new StockBatchResource($stockBatch);
+    }
+
+    public function markExpired(Request $request, StockBatch $stockBatch): StockBatchResource
+    {
+        $this->authorizePharmacyResource($request, $stockBatch->pharmacy_id);
+
+        if ($stockBatch->status === 'expired') {
+            throw new \InvalidArgumentException('This batch is already marked as expired.');
+        }
+
+        if ($stockBatch->status === 'inactive') {
+            throw new \InvalidArgumentException('This batch has been reversed and cannot be expired.');
+        }
+
+        $quantityWrittenOff = $stockBatch->quantity_on_hand;
+
+        $stockBatch->update([
+            'status'           => 'expired',
+            'quantity_on_hand' => 0,
+        ]);
+
+        if ($quantityWrittenOff > 0) {
+            StockMovement::create([
+                'pharmacy_id'     => $stockBatch->pharmacy_id,
+                'product_id'      => $stockBatch->product_id,
+                'batch_id'        => $stockBatch->id,
+                'movement_type'   => 'expiry_out',
+                'quantity_change' => -$quantityWrittenOff,
+                'reference_type'  => null,
+                'reference_id'    => null,
+                'created_by'      => $request->user()->id,
+                'notes'           => "Batch {$stockBatch->batch_number} manually marked as expired",
+            ]);
+        }
 
         $stockBatch->load('product');
 
