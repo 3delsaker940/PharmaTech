@@ -138,6 +138,7 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::post('stock-adjustments',  [StockAdjustmentController::class, 'store']);
         Route::post('stock-adjustments/bulk',[StockAdjustmentController::class, 'bulkStore']);
 
+        Route::get('cash-boxes/active', [CashBoxController::class, 'active']);
         Route::get('cash-boxes', [CashBoxController::class, 'index']);
         Route::post('cash-boxes', [CashBoxController::class, 'store']);
         Route::get('cash-boxes/{cashBox}', [CashBoxController::class, 'show']);

@@ -71,4 +71,15 @@ class CashBoxController extends Controller
 
         return CashTransactionResource::collection($transactions);
     }
+    public function active(Request $request): CashBoxResource
+    {
+        $pharmacy = $request->attributes->get('pharmacy');
+
+        $cashBox = CashBox::where('pharmacy_id', $pharmacy->id)
+            ->where('status', 'active')
+            ->with(['openedBy'])
+            ->firstOrFail();
+
+        return new CashBoxResource($cashBox);
+    }
 }
