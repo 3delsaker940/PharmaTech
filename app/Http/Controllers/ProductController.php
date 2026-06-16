@@ -96,11 +96,14 @@ class ProductController extends Controller
 
         $products = Product::where('pharmacy_id', $pharmacy->id)
             ->whereNull('deleted_at')
+            ->whereRaw('COALESCE((SELECT SUM(quantity_on_hand)
+                           FROM stock_batches
+                           WHERE product_id = products.id
+                             AND status = "active"), 0) < min_stock')
             ->withSum(
                 ['stockBatches as total_quantity_sum' => fn ($q) => $q->where('status', 'active')],
                 'quantity_on_hand'
             )
-            ->havingRaw('COALESCE(total_quantity_sum, 0) < min_stock')
             ->with('category')
             ->orderByRaw('COALESCE(total_quantity_sum, 0) ASC')
             ->paginate((int) $request->input('per_page', 15));
