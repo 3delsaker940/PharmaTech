@@ -93,6 +93,7 @@ Route::prefix('categories')
 Route::prefix('products')
     ->middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
+        Route::get('low-stock', [ProductController::class, 'lowStock']);
         Route::get('barcode/{barcode}',         [ProductController::class, 'lookupByBarcode']);
         Route::get('',                           [ProductController::class, 'index']);
         Route::post('',                          [ProductController::class, 'store']);
