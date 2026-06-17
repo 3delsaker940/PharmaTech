@@ -37,6 +37,10 @@ class ProductService
                     filter_var($filters['prescription_required'], FILTER_VALIDATE_BOOLEAN)
                 )
             )
+            ->when(
+                $filters['in_stock'] ?? null,
+                fn ($q) => $q->whereHas('stockBatches', fn ($b) => $b->where('status', 'active')->where('quantity_on_hand', '>', 0))
+            )
             ->withTotalQuantity()
             ->with('category')
             ->latest()
