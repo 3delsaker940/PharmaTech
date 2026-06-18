@@ -299,7 +299,7 @@ class AuthController extends Controller
     {
         $token = $request->query('token');
         $email = $request->query('email');
-        $platform = $request->query('web', 'mobile');
+        $platform = $request->query('platform', 'mobile');
         if ($platform === 'web') {
             return redirect(
                 env('FRONTEND_WEB_RESET_URL')
