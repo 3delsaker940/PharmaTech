@@ -105,7 +105,22 @@ class ProductController extends Controller
                 'quantity_on_hand'
             )
             ->with('category')
-            ->orderByRaw('COALESCE(total_quantity_sum, 0) ASC')
+            ->when($request->filled('severity'), function ($q) use ($request) {
+                $severity = $request->input('severity');
+                $subquery = 'COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0)';
+                match ($severity) {
+                    'out'      => $q->whereRaw("{$subquery} = 0"),
+                    'critical' => $q->whereRaw("{$subquery} > 0")
+                        ->whereRaw("{$subquery} <= (min_stock * 0.25)"),
+                    'low'      => $q->whereRaw("{$subquery} > (min_stock * 0.25)")
+                        ->whereRaw("{$subquery} < min_stock"),
+                    default    => null,
+                };
+            })
+            ->orderByRaw('COALESCE((SELECT SUM(quantity_on_hand)
+                                 FROM stock_batches
+                                 WHERE product_id = products.id
+                                   AND status = "active"), 0) ASC')
             ->paginate((int) $request->input('per_page', 15));
 
         return ProductResource::collection($products);
