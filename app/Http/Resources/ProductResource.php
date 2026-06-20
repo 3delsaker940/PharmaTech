@@ -30,6 +30,7 @@ class ProductResource extends JsonResource
             'selling_unit' => $this->selling_unit,
             'units_per_base' => $this->units_per_base,
             'allow_partial_selling' => $this->allow_partial_selling,
+            'nearest_expiry' => $this->nearest_expiry,
             'image_path'=>$this->image_path,
             'deleted_at' => $this->deleted_at,
             'category'=> new CategoryResource($this->whenLoaded('category')),
