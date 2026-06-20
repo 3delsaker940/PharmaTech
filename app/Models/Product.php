@@ -76,4 +76,19 @@ class Product extends Model
             }
         );
     }
+    protected function nearestExpiry(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if (array_key_exists('nearest_expiry', $this->attributes)) {
+                    return $this->attributes['nearest_expiry'];
+                }
+
+                return $this->stockBatches()
+                    ->where('status', 'active')
+                    ->whereNotNull('expiry_date')
+                    ->min('expiry_date');
+            }
+        );
+    }
 }

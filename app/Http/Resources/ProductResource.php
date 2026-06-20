@@ -30,20 +30,7 @@ class ProductResource extends JsonResource
             'selling_unit' => $this->selling_unit,
             'units_per_base' => $this->units_per_base,
             'allow_partial_selling' => $this->allow_partial_selling,
-            'stock_alert_severity' => $this->when(
-                isset($this->total_quantity_sum) || $this->total_quantity_sum === null,
-                function () {
-                    $qty = (int) ($this->total_quantity_sum ?? 0);
-                    $min = (int) $this->min_stock;
-                    if ($qty === 0) {
-                        return 'out';
-                    }
-                    if ($qty <= $min * 0.25) {
-                        return 'critical';
-                    }
-                    return 'low';
-                }
-            ),
+            'nearest_expiry' => $this->nearest_expiry,
             'image_path'=>$this->image_path,
             'deleted_at' => $this->deleted_at,
             'category'=> new CategoryResource($this->whenLoaded('category')),

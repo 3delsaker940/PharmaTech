@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
+use App\Http\Resources\ProductCardResource;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\StockBatchResource;
 use App\Models\Product;
@@ -23,10 +24,21 @@ class ProductController extends Controller
     {
         $products = $this->productService->list(
             $request->attributes->get('pharmacy'),
-            $request->only(['search', 'category_id', 'prescription_required', 'with_trashed', 'per_page'])
+            $request->only(['search',
+                'category_id',
+                'prescription_required',
+                'with_trashed',
+                'per_page',
+                'sort_by',
+                'stock_status',
+                'min_price',
+                'max_price',
+                'expiry_filter',
+                'stock_range',
+                'base_unit'])
         );
 
-        return ProductResource::collection($products);
+        return ProductCardResource::collection($products);
     }
 
     public function store(StoreProductRequest $request): JsonResponse
@@ -105,6 +117,10 @@ class ProductController extends Controller
                 'quantity_on_hand'
             )
             ->with('category')
+            ->withMin(
+                ['stockBatches as nearest_expiry' => fn ($q) => $q->where('status', 'active')->whereNotNull('expiry_date')],
+                'expiry_date'
+            )
             ->when($request->filled('severity'), function ($q) use ($request) {
                 $severity = $request->input('severity');
                 $subquery = 'COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0)';
@@ -123,7 +139,7 @@ class ProductController extends Controller
                                    AND status = "active"), 0) ASC')
             ->paginate((int) $request->input('per_page', 15));
 
-        return ProductResource::collection($products);
+        return ProductCardResource::collection($products);
     }
 
     public function availableBatches(Request $request, Product $product): AnonymousResourceCollection
