@@ -87,6 +87,10 @@ class ProductService
                 };
             })
             ->when($filters['base_unit'] ?? null, fn ($q, $v) => $q->where('base_unit', $v))
+            ->when(
+                $filters['in_stock'] ?? null,
+                fn ($q) => $q->whereHas('stockBatches', fn ($b) => $b->where('status', 'active')->where('quantity_on_hand', '>', 0))
+            )
             ->withTotalQuantity()
             ->with('category')
             ->withMin(
