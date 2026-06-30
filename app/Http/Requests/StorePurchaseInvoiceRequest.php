@@ -100,14 +100,12 @@ class StorePurchaseInvoiceRequest extends FormRequest
             if ($this->input('payment_method') === 'cash' && $amountPaid > 0) {
                 $pharmacyId = $this->attributes->get('pharmacy')->id;
 
-                $hasActiveCashBox = CashBox::where('pharmacy_id', $pharmacyId)
-                    ->where('status', 'active')
-                    ->exists();
+                $hasCashBox = CashBox::where('pharmacy_id', $pharmacyId)->exists();
 
-                if (! $hasActiveCashBox) {
+                if (! $hasCashBox) {
                     $validator->errors()->add(
                         'payment_method',
-                        'No active cash box found. Open a cash box before recording a cash payment.'
+                        'No cash box found. Please set up your cash box before recording a cash payment.'
                     );
                 }
             }

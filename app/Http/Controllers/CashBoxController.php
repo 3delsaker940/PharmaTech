@@ -13,52 +13,36 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CashBoxController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
-    public function index(Request $request): AnonymousResourceCollection
-    {
-        $pharmacy = $request->attributes->get('pharmacy');
-
-        $cashBoxes = CashBox::query()
-            ->where('pharmacy_id', $pharmacy->id)
-            ->with(['openedBy', 'closedBy'])
-            ->orderByDesc('opened_at')
-            ->paginate((int) $request->input('per_page', 15));
-
-        return CashBoxResource::collection($cashBoxes);
-    }
-
     public function store(StoreCashBoxRequest $request): JsonResponse
     {
         $pharmacy = $request->attributes->get('pharmacy');
 
         $cashBox = CashBox::create([
             'pharmacy_id'     => $pharmacy->id,
-            'name'            => $request->validated('name'),
             'opening_balance' => $request->validated('opening_balance'),
             'current_balance' => $request->validated('opening_balance'),
-            'status'          => 'active',
-            'opened_by'       => $request->user()->id,
-            'opened_at'       => now(),
         ]);
 
-        return (new CashBoxResource($cashBox->load('openedBy')))
+        return (new CashBoxResource($cashBox))
             ->response()
             ->setStatusCode(201);
     }
 
-    public function show(Request $request, CashBox $cashBox): CashBoxResource
+    public function show(Request $request): CashBoxResource
     {
-        $this->authorizePharmacyResource($request, $cashBox->pharmacy_id);
+        $pharmacy = $request->attributes->get('pharmacy');
 
-        $cashBox->load(['openedBy', 'closedBy']);
+        $cashBox = CashBox::where('pharmacy_id', $pharmacy->id)
+            ->firstOrFail();
 
         return new CashBoxResource($cashBox);
     }
 
-    public function transactions(Request $request, CashBox $cashBox): AnonymousResourceCollection
+    public function transactions(Request $request): AnonymousResourceCollection
     {
-        $this->authorizePharmacyResource($request, $cashBox->pharmacy_id);
+        $pharmacy = $request->attributes->get('pharmacy');
+
+        $cashBox = CashBox::where('pharmacy_id', $pharmacy->id)->firstOrFail();
 
         $transactions = $cashBox->transactions()
             ->when(
@@ -70,16 +54,5 @@ class CashBoxController extends Controller
             ->paginate((int) $request->input('per_page', 15));
 
         return CashTransactionResource::collection($transactions);
-    }
-    public function active(Request $request): CashBoxResource
-    {
-        $pharmacy = $request->attributes->get('pharmacy');
-
-        $cashBox = CashBox::where('pharmacy_id', $pharmacy->id)
-            ->where('status', 'active')
-            ->with(['openedBy'])
-            ->firstOrFail();
-
-        return new CashBoxResource($cashBox);
     }
 }

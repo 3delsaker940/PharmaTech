@@ -25,8 +25,14 @@ class StoreCashBoxRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'            => ['required', 'string', 'max:255'],
             'opening_balance' => ['required', 'numeric', 'min:0'],
+        ];
+    }
+    public function messages(): array
+    {
+        return [
+            'opening_balance.required' => 'Please enter the current amount of cash in your cash box. Enter 0 if empty.',
+            'opening_balance.min' => 'Opening balance cannot be negative.',
         ];
     }
     public function withValidator(Validator $validator): void
@@ -34,14 +40,12 @@ class StoreCashBoxRequest extends FormRequest
         $validator->after(function (Validator $validator) {
             $pharmacyId = $this->attributes->get('pharmacy')->id;
 
-            $hasActive = CashBox::where('pharmacy_id', $pharmacyId)
-                ->where('status', 'active')
-                ->exists();
+            $exists = CashBox::where('pharmacy_id', $pharmacyId)->exists();
 
-            if ($hasActive) {
+            if ($exists) {
                 $validator->errors()->add(
-                    'name',
-                    'An active cash box already exists for this pharmacy. Close it before opening a new one.'
+                    'opening_balance',
+                    'This pharmacy already has a cash box.'
                 );
             }
         });

@@ -43,7 +43,7 @@ class SupplierController extends Controller
     public function show(Request $request, Supplier $supplier): SupplierResource
     {
         $this->authorizePharmacyResource($request, $supplier->pharmacy_id);
-
+        $supplier->load('company');
         return new SupplierResource($supplier);
     }
 
@@ -53,7 +53,7 @@ class SupplierController extends Controller
 
         $updated = $this->supplierService->update($supplier, $request->validated());
 
-        return new SupplierResource($updated);
+        return new SupplierResource($updated->load('company'));
     }
 
     public function destroy(Request $request, Supplier $supplier): JsonResponse

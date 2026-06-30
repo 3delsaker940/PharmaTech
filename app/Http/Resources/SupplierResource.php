@@ -22,6 +22,9 @@ class SupplierResource extends JsonResource
             'address' => $this->address,
             'notes' => $this->notes,
             'deleted_at' => $this->deleted_at,
+            'company' => $this->company
+                ? new CompanyResource($this->company)
+                : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

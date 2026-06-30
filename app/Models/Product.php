@@ -32,7 +32,7 @@ class Product extends Model
 
     public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class)->withTrashed();
+        return $this->belongsTo(Category::class);
     }
 
     public function medicalInfo(): HasOne
@@ -52,6 +52,21 @@ class Product extends Model
     public function purchaseInvoiceItems(): HasMany
     {
         return $this->hasMany(PurchaseInvoiceItem::class);
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function baseUnit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'base_unit_id');
+    }
+
+    public function sellingUnit(): BelongsTo
+    {
+        return $this->belongsTo(Unit::class, 'selling_unit_id');
     }
 
     public function scopeWithTotalQuantity($query)

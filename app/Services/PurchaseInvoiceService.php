@@ -124,7 +124,7 @@ class PurchaseInvoiceService
             }
 
             if ($data['payment_method'] === 'cash' && $amountPaid > 0) {
-                $cashBox = $this->cashBoxService->getActiveBox($pharmacy->id);
+                $cashBox = $this->cashBoxService->getCashBox($pharmacy->id);
 
                 if ($cashBox) {
                     $this->cashBoxService->deductForPurchase(
@@ -169,7 +169,7 @@ class PurchaseInvoiceService
             $this->stockService->reverseBatchesFromCancellation($invoice, $user);
 
             if ($invoice->payment_method === 'cash' && $invoice->amount_paid > 0) {
-                $cashBox = $this->cashBoxService->getActiveBox($invoice->pharmacy_id);
+                $cashBox = $this->cashBoxService->getCashBox($invoice->pharmacy_id);
 
                 if ($cashBox) {
                     $this->cashBoxService->refundFromCancellation($cashBox, $invoice, $user);
