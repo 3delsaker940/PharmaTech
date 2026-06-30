@@ -9,11 +9,9 @@ use App\Models\User;
 
 class CashBoxService
 {
-    public function getActiveBox(int $pharmacyId): ?CashBox
+    public function getCashBox(int $pharmacyId): ?CashBox
     {
-        return CashBox::where('pharmacy_id', $pharmacyId)
-            ->where('status', 'active')
-            ->first();
+        return CashBox::where('pharmacy_id', $pharmacyId)->first();
     }
 
     public function deductForPurchase(

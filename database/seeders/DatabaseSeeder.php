@@ -16,6 +16,9 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             LocationSeeder::class,
+            UnitSeeder::class,
+            CategorySeeder::class,
+            CompanySeeder::class,
         ]);
 
         $pharmacy = Pharmacy::firstOrCreate(
@@ -45,7 +48,6 @@ class DatabaseSeeder extends Seeder
         $user->markEmailAsVerified();
 
         $this->call([
-            CategorySeeder::class,
             ProductSeeder::class,
             CashBoxSeeder::class,
             PurchaseInvoiceSeeder::class,

@@ -26,6 +26,7 @@ class ProductController extends Controller
             $request->attributes->get('pharmacy'),
             $request->only(['search',
                 'category_id',
+                'company_id',
                 'prescription_required',
                 'with_trashed',
                 'per_page',
@@ -35,7 +36,8 @@ class ProductController extends Controller
                 'max_price',
                 'expiry_filter',
                 'stock_range',
-                'base_unit'])
+                'base_unit',
+                'in_stock',])
         );
 
         return ProductCardResource::collection($products);
@@ -48,7 +50,7 @@ class ProductController extends Controller
             $request->validated()
         );
 
-        return (new ProductResource($product->load('category')))
+        return (new ProductResource($product->load('category' ,'company', 'baseUnit', 'sellingUnit')))
             ->response()
             ->setStatusCode(201);
     }
@@ -57,7 +59,7 @@ class ProductController extends Controller
     {
         $this->authorizePharmacyResource($request, $product->pharmacy_id);
 
-        return new ProductResource($product->load(['category', 'medicalInfo']));
+        return new ProductResource($product->load(['category', 'company', 'baseUnit', 'sellingUnit', 'medicalInfo']));
     }
 
     public function update(UpdateProductRequest $request, Product $product): ProductResource
@@ -66,7 +68,7 @@ class ProductController extends Controller
 
         $updated = $this->productService->update($product, $request->validated());
 
-        return new ProductResource($updated->load(['category', 'medicalInfo']));
+        return new ProductResource($updated->load(['category', 'company', 'baseUnit', 'sellingUnit', 'medicalInfo']));
     }
 
     public function destroy(Request $request, Product $product): JsonResponse

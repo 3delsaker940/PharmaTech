@@ -13,23 +13,11 @@ class CashBox extends Model
     protected $casts = [
         'opening_balance' => 'float',
         'current_balance' => 'float',
-        'opened_at'       => 'datetime',
-        'closed_at'       => 'datetime',
     ];
 
     public function pharmacy(): BelongsTo
     {
         return $this->belongsTo(Pharmacy::class);
-    }
-
-    public function openedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'opened_by');
-    }
-
-    public function closedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'closed_by');
     }
 
     public function transactions(): HasMany

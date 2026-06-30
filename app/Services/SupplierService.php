@@ -20,9 +20,15 @@ class SupplierService
         return $query
             ->when(
                 filled($filters['search'] ?? null),
-                fn ($q) => $q->where('name', 'like', '%' . $filters['search'] . '%')
+                fn ($q) => $q->where(function ($inner) use ($filters) {
+                    $term = '%' . $filters['search'] . '%';
+                    $inner->where('name', 'like', $term)
+                        ->orWhere('phone', 'like', $term)
+                        ->orWhere('email', 'like', $term);
+                })
             )
-            ->latest()
+            ->with('company')
+            ->orderBy('name')
             ->paginate((int) ($filters['per_page'] ?? 15));
     }
 
@@ -37,7 +43,7 @@ class SupplierService
     public function update(Supplier $supplier, array $data): Supplier
     {
         $supplier->update(array_intersect_key($data, array_flip([
-            'name', 'phone', 'email', 'address', 'notes',
+            'name', 'phone', 'email', 'address', 'notes', 'company_id',
         ])));
 
         return $supplier->fresh();

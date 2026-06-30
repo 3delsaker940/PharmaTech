@@ -20,14 +20,25 @@ class ProductCardResource extends JsonResource
         return [
             'id' => $this->id,
             'brand_name' => $this->brand_name,
+            'ar_name' => $this->ar_name,
+            'strength' => $this->strength,
             'selling_price' => $this->selling_price,
-            'base_unit' => $this->base_unit,
             'min_stock' => $this->min_stock,
+            'max_stock' => $this->max_stock,
             'total_quantity' => $totalQuantity,
             'nearest_expiry' => $this->nearest_expiry,
             'stock_status' => $this->resolveStockStatus($totalQuantity, $minStock),
             'stock_alert_severity' => $this->resolveSeverity($totalQuantity, $minStock),
+            'base_unit' => $this->baseUnit
+                ? new UnitResource($this->baseUnit)
+                : null,
+            'selling_unit' => $this->sellingUnit
+                ? new UnitResource($this->sellingUnit)
+                : null,
             'category' => new CategoryResource($this->whenLoaded('category')),
+            'company' => $this->company
+                ? new CompanyResource($this->company)
+                : null,
         ];
     }
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CashBoxController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
 use App\Http\Controllers\PurchaseInvoiceController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierDebtController;
+use App\Http\Controllers\UnitController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -79,17 +81,6 @@ Route::prefix('pharmacy')
         Route::get('/category/{categoryId}/products', [InventoryController::class, 'getProductsByCategory']);
     });
 
-Route::prefix('categories')
-    ->middleware(['auth:sanctum', 'resolve.pharmacy'])
-    ->group(function () {
-        Route::get('',                         [CategoryController::class, 'index']);
-        Route::post('',                        [CategoryController::class, 'store']);
-        Route::get('{category}',              [CategoryController::class, 'show']);
-        Route::put('{category}',              [CategoryController::class, 'update']);
-        Route::delete('{category}',        [CategoryController::class, 'destroy']);
-        Route::patch('{category}/restore', [CategoryController::class, 'restore'])->withTrashed();
-    });
-
 Route::prefix('products')
     ->middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
@@ -119,8 +110,15 @@ Route::prefix('suppliers')
         Route::patch('{supplier}/restore', [SupplierController::class, 'restore'])->withTrashed();
     });
 
+Route::get('categories', [CategoryController::class, 'index']);
+Route::get('units', [UnitController::class, 'index']);
+Route::get('companies',  [CompanyController::class, 'index']);
+Route::get('companies/{company}', [CompanyController::class, 'show']);
+
 Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
+        Route::get('categories/{category}', [CategoryController::class, 'show']);
+
         Route::get('supplier-debts',                 [SupplierDebtController::class, 'index']);
         Route::get('supplier-debts/{supplierDebt}',  [SupplierDebtController::class, 'show']);
 
@@ -141,10 +139,8 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::post('stock-adjustments',  [StockAdjustmentController::class, 'store']);
         Route::post('stock-adjustments/bulk',[StockAdjustmentController::class, 'bulkStore']);
 
-        Route::get('cash-boxes/active', [CashBoxController::class, 'active']);
-        Route::get('cash-boxes', [CashBoxController::class, 'index']);
+        Route::get('cash-boxes', [CashBoxController::class, 'show']);
         Route::post('cash-boxes', [CashBoxController::class, 'store']);
-        Route::get('cash-boxes/{cashBox}', [CashBoxController::class, 'show']);
-        Route::get('cash-boxes/{cashBox}/transactions', [CashBoxController::class, 'transactions']);
+        Route::get('cash-boxes/transactions', [CashBoxController::class, 'transactions']);
 
     });
