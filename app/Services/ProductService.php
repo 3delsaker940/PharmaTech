@@ -3,10 +3,58 @@
 namespace App\Services;
 use App\Models\Pharmacy;
 use App\Models\Product;
+use App\Models\Unit;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ProductService
 {
+    private function getDefaults(): array
+    {
+        return [
+            'prescription_required' => false,
+            'tax_rate' => 0.0,
+            'discount_rate' => 0.0,
+            'min_stock' => 0,
+            'units_per_base' => 1,
+            'allow_partial_selling' => false,
+        ];
+    }
+    private function sanitizeForStore(array $data): array
+    {
+        $data = array_merge($this->getDefaults(), $data);
+        foreach ($this->getDefaults() as $key => $default) {
+            if (array_key_exists($key, $data) && $data[$key] === null) {
+                $data[$key] = $default;
+            }
+        }
+        if (empty($data['base_unit_id'])) {
+            $piece = Unit::where('name', 'Piece')->first();
+            $data['base_unit_id'] = $piece?->id;
+        }
+        if (empty($data['selling_unit_id'])) {
+            $piece = $piece ?? Unit::where('name', 'Piece')->first();
+            $data['selling_unit_id'] = $piece?->id;
+        }
+        return $data;
+    }
+    private function sanitizeForUpdate(array $data): array
+    {
+        $defaults = $this->getDefaults();
+        foreach ($defaults as $key => $default) {
+            if (array_key_exists($key, $data) && $data[$key] === null) {
+                $data[$key] = $default;
+            }
+        }
+        if (array_key_exists('base_unit_id', $data) && $data['base_unit_id'] === null) {
+            $piece = Unit::where('name', 'Piece')->first();
+            $data['base_unit_id'] = $piece?->id;
+        }
+        if (array_key_exists('selling_unit_id', $data) && $data['selling_unit_id'] === null) {
+            $piece = $piece ?? Unit::where('name', 'Piece')->first();
+            $data['selling_unit_id'] = $piece?->id;
+        }
+        return $data;
+    }
     public function list(Pharmacy $pharmacy, array $filters = []): LengthAwarePaginator
     {
         $query = Product::query()
@@ -145,20 +193,17 @@ class ProductService
 
     public function store(Pharmacy $pharmacy, array $data): Product
     {
+        $sanitized = $this->sanitizeForStore($data);
         return Product::create([
+            ...$sanitized,
             'pharmacy_id' => $pharmacy->id,
-            ...$data,
         ]);
     }
 
     public function update(Product $product, array $data): Product
     {
-        $product->update(array_intersect_key($data, array_flip([
-            'category_id', 'barcode', 'brand_name', 'scientific_name', 'strength',
-            'prescription_required', 'buying_price', 'selling_price', 'ar_name', 'company_id',
-            'tax_rate', 'discount_rate', 'min_stock', 'max_stock', 'image_path', 'shelf',
-            'base_unit_id', 'selling_unit_id', 'units_per_base', 'allow_partial_selling',
-        ])));
+        $sanitized = $this->sanitizeForUpdate($data);
+        $product->update($sanitized);
 
         return $product->fresh(['category']);
     }

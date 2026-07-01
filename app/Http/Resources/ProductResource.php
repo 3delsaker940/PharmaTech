@@ -28,12 +28,10 @@ class ProductResource extends JsonResource
             'tax_rate' => $this->tax_rate,
             'discount_rate' => $this->discount_rate,
             'min_stock' => $this->min_stock,
-            'max_stock' => $this->max_stock,
             'units_per_base' => $this->units_per_base,
             'allow_partial_selling' => $this->allow_partial_selling,
             'nearest_expiry' => $this->nearest_expiry,
             'shelf' => $this->shelf,
-            'image_path'=>$this->image_path,
             'deleted_at' => $this->deleted_at,
             'base_unit' => $this->baseUnit
                 ? new UnitResource($this->baseUnit)
