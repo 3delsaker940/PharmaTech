@@ -85,6 +85,15 @@ class ProductService
                 )
             )
             ->when(
+                filled($filters['company_id'] ?? null),
+                fn ($q) => $q->whereIn(
+                    'company_id',
+                    is_array($filters['company_id'])
+                        ? $filters['company_id']
+                        : array_filter(array_map('trim', explode(',', $filters['company_id'])))
+                )
+            )
+            ->when(
                 isset($filters['prescription_required']),
                 fn ($q) => $q->where(
                     'prescription_required',
