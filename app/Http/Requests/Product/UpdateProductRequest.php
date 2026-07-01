@@ -44,27 +44,15 @@ class UpdateProductRequest extends FormRequest
             'company_id' => ['nullable', 'integer', Rule::exists('companies', 'id')],
             'base_unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')],
             'selling_unit_id' => ['nullable', 'integer', Rule::exists('units', 'id')],
-            'prescription_required' => ['nullable', 'boolean'],
+            'prescription_required' => ['sometimes', 'boolean'],
             'buying_price' => ['sometimes', 'numeric', 'min:0'],
             'selling_price'=> ['sometimes',  'numeric', 'min:0'],
-            'tax_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'discount_rate'=> ['nullable', 'numeric', 'min:0', 'max:100'],
-            'min_stock' => ['nullable', 'integer', 'min:0'],
-            'max_stock' => [
-                'nullable',
-                'integer',
-                function ($attribute, $value, $fail) {
-                    $minStock = $this->input('min_stock')
-                        ?? $this->route('product')->min_stock;
-                    if ($value !== null && $value <= $minStock) {
-                        $fail('Maximum stock must be greater than minimum stock.');
-                    }
-                },
-            ],
-            'units_per_base' => ['nullable', 'integer', 'min:1'],
-            'allow_partial_selling' => ['nullable', 'boolean'],
+            'tax_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'discount_rate'=> ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'min_stock' => ['sometimes', 'integer', 'min:0'],
+            'units_per_base' => ['sometimes', 'integer', 'min:1'],
+            'allow_partial_selling' => ['sometimes', 'boolean'],
             'shelf' => ['nullable', 'string', 'max:100'],
-            'image_path' => ['nullable','string','max:255'],
         ];
     }
 

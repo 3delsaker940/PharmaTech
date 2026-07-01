@@ -29,11 +29,9 @@ return new class extends Migration
             $table->decimal('tax_rate', 5, 2)->default(0.00);
             $table->decimal('discount_rate', 5, 2)->default(0.00);
             $table->unsignedInteger('min_stock')->default(0);
-            $table->unsignedInteger('max_stock')->nullable();
             $table->unsignedInteger('units_per_base')->default(1);
             $table->boolean('allow_partial_selling')->default(false);
             $table->string('shelf')->nullable();
-            $table->string('image_path')->nullable();
             $table->softDeletes();
             $table->timestamps();
 

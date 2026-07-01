@@ -32,6 +32,7 @@ class StoreSupplierRequest extends FormRequest
                 'max:255',
                 Rule::unique('suppliers', 'name')->where('pharmacy_id', $pharmacyId),
             ],
+            'company_id' => ['nullable', 'integer', Rule::exists('companies', 'id')],
             'phone'   => ['nullable', 'string', 'max:20'],
             'email'   => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string'],
@@ -43,6 +44,7 @@ class StoreSupplierRequest extends FormRequest
     {
         return [
             'name.unique' => 'A supplier with this name already exists in this pharmacy.',
+            'company_id.exists' => 'The selected company does not exist.',
         ];
     }
 }

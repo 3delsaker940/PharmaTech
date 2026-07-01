@@ -13,6 +13,7 @@ use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -107,38 +108,39 @@ class ProductController extends Controller
     public function lowStock(Request $request): AnonymousResourceCollection
     {
         $pharmacy = $request->attributes->get('pharmacy');
+        $activeStock = fn (float $multiplier = 1) => DB::table('stock_batches')
+            ->selectRaw("COALESCE(SUM(quantity_on_hand), 0) * {$multiplier}")
+            ->whereColumn('stock_batches.product_id', 'products.id')
+            ->where('stock_batches.status', 'active');
 
         $products = Product::where('pharmacy_id', $pharmacy->id)
-            ->whereNull('deleted_at')
-            ->whereRaw('COALESCE((SELECT SUM(quantity_on_hand)
-                           FROM stock_batches
-                           WHERE product_id = products.id
-                             AND status = "active"), 0) < min_stock')
+            ->where('min_stock', '>', $activeStock())
             ->withSum(
                 ['stockBatches as total_quantity_sum' => fn ($q) => $q->where('status', 'active')],
                 'quantity_on_hand'
             )
-            ->with('category')
             ->withMin(
                 ['stockBatches as nearest_expiry' => fn ($q) => $q->where('status', 'active')->whereNotNull('expiry_date')],
                 'expiry_date'
             )
-            ->when($request->filled('severity'), function ($q) use ($request) {
-                $severity = $request->input('severity');
-                $subquery = 'COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0)';
-                match ($severity) {
-                    'out'      => $q->whereRaw("{$subquery} = 0"),
-                    'critical' => $q->whereRaw("{$subquery} > 0")
-                        ->whereRaw("{$subquery} <= (min_stock * 0.25)"),
-                    'low'      => $q->whereRaw("{$subquery} > (min_stock * 0.25)")
-                        ->whereRaw("{$subquery} < min_stock"),
-                    default    => null,
+            ->with('category')
+            ->when($request->filled('severity'), function ($q) use ($request, $activeStock) {
+                match ($request->input('severity')) {
+                    'out' => $q->whereDoesntHave(
+                        'stockBatches',
+                        fn ($b) => $b->where('status', 'active')->where('quantity_on_hand', '>', 0)
+                    ),
+                    'critical' => $q->whereHas(
+                        'stockBatches',
+                        fn ($b) => $b->where('status', 'active')->where('quantity_on_hand', '>', 0)
+                    )
+                        ->where('min_stock', '>=', $activeStock(4)),
+                    'low' => $q->where('min_stock', '<', $activeStock(4))
+                        ->where('min_stock', '>', $activeStock()),
+                    default => null,
                 };
             })
-            ->orderByRaw('COALESCE((SELECT SUM(quantity_on_hand)
-                                 FROM stock_batches
-                                 WHERE product_id = products.id
-                                   AND status = "active"), 0) ASC')
+            ->orderBy('total_quantity_sum', 'asc')
             ->paginate((int) $request->input('per_page', 15));
 
         return ProductCardResource::collection($products);
