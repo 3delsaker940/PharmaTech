@@ -5,6 +5,7 @@ use App\Models\Pharmacy;
 use App\Models\Product;
 use App\Models\Unit;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class ProductService
 {
@@ -71,6 +72,7 @@ class ProductService
                     $term = '%' . $filters['search'] . '%';
                     $inner->where('brand_name', 'like', $term)
                         ->orWhere('scientific_name', 'like', $term)
+                        ->orWhere('barcode', 'like', $term)
                         ->orWhere('ar_name', 'like', $term)
                         ->orWhereHas('company', fn ($c) => $c->where('name', 'like', $term));
                 })
@@ -106,65 +108,87 @@ class ProductService
                     'name_desc' => $q->orderBy('brand_name', 'desc'),
                     'price_asc' => $q->orderBy('selling_price', 'asc'),
                     'price_desc' => $q->orderBy('selling_price', 'desc'),
-                    'stock_asc'  => $q->orderByRaw('COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0) ASC'),
-                    'stock_desc' => $q->orderByRaw('COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0) DESC'),
-                    'expiry_asc' => $q->orderByRaw('(SELECT MIN(expiry_date) FROM stock_batches WHERE product_id = products.id AND status = "active" AND expiry_date IS NOT NULL) ASC'),
-                    'expiry_desc' => $q->orderByRaw('(SELECT MIN(expiry_date) FROM stock_batches WHERE product_id = products.id AND status = "active" AND expiry_date IS NOT NULL) DESC'),
+                    'stock_asc'  => $q->orderBy('total_quantity_sum', 'asc'),
+                    'stock_desc' => $q->orderBy('total_quantity_sum', 'desc'),
+                    'expiry_asc' => $q->orderBy('nearest_expiry', 'asc'),
+                    'expiry_desc' => $q->orderBy('nearest_expiry', 'desc'),
                     default => $q->orderByDesc('id'),
                 };
             })
            ->when(! isset($filters['sort_by']), fn ($q) => $q->orderBy('brand_name', 'asc'))
             ->when($filters['stock_status'] ?? null, function ($q, $v) {
                 match ($v) {
-                    'out'       => $q->whereRaw('COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0) = 0'),
-                    'low'       => $q->whereRaw('COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0) > 0')
-                        ->whereRaw('COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0) < min_stock'),
-                    'available' => $q->whereRaw('COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0) >= min_stock'),
-                    default     => null,
+                    'out' => $q->whereDoesntHave(
+                        'stockBatches',
+                        fn ($b) => $b->where('status', 'active')->where('quantity_on_hand', '>', 0)
+                    ),
+                    'low' => $q->whereHas(
+                        'stockBatches',
+                        fn ($b) => $b->where('status', 'active')->where('quantity_on_hand', '>', 0)
+                    )
+                        ->where('min_stock', '>', $this->activeStockSubquery()),
+                    'available' => $q->where('min_stock', '<=', $this->activeStockSubquery()),
+                    default => null,
                 };
             })
             ->when($filters['min_price'] ?? null, fn ($q, $v) => $q->where('selling_price', '>=', $v))
             ->when($filters['max_price'] ?? null, fn ($q, $v) => $q->where('selling_price', '<=', $v))
-            ->when(
-                filled($filters['expiry_filter'] ?? null),
-                function ($q) use ($filters) {
-                    $values = is_array($filters['expiry_filter'])
-                        ? $filters['expiry_filter']
-                        : array_filter(array_map('trim', explode(',', $filters['expiry_filter'])));
-                    if (empty($values)) {
-                        return;
-                    }
-                    $sub = 'SELECT MIN(expiry_date) FROM stock_batches WHERE product_id = products.id AND status = "active" AND expiry_date IS NOT NULL';
-                    $q->where(function ($inner) use ($values, $sub) {
-                        foreach ($values as $index => $v) {
-                            $condition = match (trim($v)) {
-                                'expired' => ["({$sub}) < ?", [now()->toDateString()]],
-                                '30days'  => ["({$sub}) BETWEEN ? AND ?", [now()->toDateString(), now()->addDays(30)->toDateString()]],
-                                '60days'  => ["({$sub}) BETWEEN ? AND ?", [now()->toDateString(), now()->addDays(60)->toDateString()]],
-                                '90days'  => ["({$sub}) BETWEEN ? AND ?", [now()->toDateString(), now()->addDays(90)->toDateString()]],
-                                '6months' => ["({$sub}) BETWEEN ? AND ?", [now()->toDateString(), now()->addMonths(6)->toDateString()]],
-                                default   => null,
-                            };
-                            if ($condition === null) {
-                                continue;
-                            }
-                            [$sql, $bindings] = $condition;
-                            $index === 0
-                                ? $inner->whereRaw($sql, $bindings)
-                                : $inner->orWhereRaw($sql, $bindings);
-                        }
-                    });
-                }
-            )
-            ->when($filters['stock_range'] ?? null, function ($q, $v) {
-                $subquery = 'COALESCE((SELECT SUM(quantity_on_hand) FROM stock_batches WHERE product_id = products.id AND status = "active"), 0)';
+            ->when(filled($filters['expiry_filter'] ?? null), function ($q) use ($filters) {
+                $values = is_array($filters['expiry_filter'])
+                    ? $filters['expiry_filter']
+                    : array_filter(array_map('trim', explode(',', $filters['expiry_filter'])));
 
+                if (empty($values)) {
+                    return;
+                }
+
+                $today = now()->toDateString();
+
+                $ranges = [
+                    '30days'  => [$today, now()->addDays(30)->toDateString()],
+                    '60days'  => [$today, now()->addDays(60)->toDateString()],
+                    '90days'  => [$today, now()->addDays(90)->toDateString()],
+                    '6months' => [$today, now()->addMonths(6)->toDateString()],
+                ];
+
+                $q->having(function ($having) use ($values, $ranges, $today) {
+                    $first = true;
+
+                    foreach ($values as $value) {
+                        $value = trim($value);
+
+                        if ($value === 'expired') {
+                            $first
+                                ? $having->having('nearest_expiry', '<', $today)
+                                : $having->orHaving('nearest_expiry', '<', $today);
+                            $first = false;
+                            continue;
+                        }
+
+                        if (! array_key_exists($value, $ranges)) {
+                            continue;
+                        }
+
+                        [$start, $end] = $ranges[$value];
+
+                        $first
+                            ? $having->havingBetween('nearest_expiry', [$start, $end])
+                            : $having->orHavingBetween('nearest_expiry', [$start, $end]);
+
+                        $first = false;
+                    }
+                });
+            })
+            ->when($filters['stock_range'] ?? null, function ($q, $v) {
                 match ($v) {
-                    'out'      => $q->whereRaw("{$subquery} = 0"),
-                    'very_low' => $q->whereRaw("{$subquery} BETWEEN 1 AND 10"),
-                    'low'      => $q->whereRaw("{$subquery} BETWEEN 11 AND 30"),
-                    'medium'   => $q->whereRaw("{$subquery} BETWEEN 31 AND 100"),
-                    'plenty'   => $q->whereRaw("{$subquery} > 100"),
+                    'out' => $q->whereDoesntHave(
+                        'stockBatches',
+                        fn ($b) => $b->where('status', 'active')->where('quantity_on_hand', '>', 0)
+                    ),
+                    'very_low' => $q->having('total_quantity_sum', '>=', 1)->having('total_quantity_sum', '<=', 10),
+                    'low' => $q->having('total_quantity_sum', '>=', 11)->having('total_quantity_sum', '<=', 30),
+                    'medium' => $q->having('total_quantity_sum', '>=', 31)->having('total_quantity_sum', '<=', 100),
+                    'plenty' => $q->having('total_quantity_sum', '>', 100),
                     default    => null,
                 };
             })
@@ -181,7 +205,11 @@ class ProductService
                 $filters['in_stock'] ?? null,
                 fn ($q) => $q->whereHas('stockBatches', fn ($b) => $b->where('status', 'active')->where('quantity_on_hand', '>', 0))
             )
-            ->withTotalQuantity()
+            ->withSum(
+                ['stockBatches as total_quantity_sum' => fn ($q) => $q->where('status', 'active')],
+                'quantity_on_hand'
+            )
+            //->withTotalQuantity()
             ->with('category', 'company', 'baseUnit', 'sellingUnit')
             ->withMin(
                 ['stockBatches as nearest_expiry' => fn ($q) => $q->where('status', 'active')->whereNotNull('expiry_date')],
@@ -190,7 +218,13 @@ class ProductService
             ->latest()
             ->paginate((int) ($filters['per_page'] ?? 15));
     }
-
+    private function activeStockSubquery(float $multiplier = 1): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('stock_batches')
+            ->selectRaw("COALESCE(SUM(quantity_on_hand), 0) * {$multiplier}")
+            ->whereColumn('stock_batches.product_id', 'products.id')
+            ->where('stock_batches.status', 'active');
+    }
     public function findByBarcode(Pharmacy $pharmacy, string $barcode): ?Product
     {
         return Product::query()
