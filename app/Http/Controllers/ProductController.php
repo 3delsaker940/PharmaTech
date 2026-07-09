@@ -37,7 +37,7 @@ class ProductController extends Controller
                 'max_price',
                 'expiry_filter',
                 'stock_range',
-                'base_unit',
+                'base_unit_id',
                 'in_stock',])
         );
 
