@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\StockBatchResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -21,8 +22,14 @@ class InventoryController extends Controller
         $product = Product::where('pharmacy_id', $pharmacyId)
             ->where('id', $productId)
             ->firstOrFail();
-        $stockBatches = $product->stockBatches;
-        return response()->json($stockBatches, 200);
+        $batches = $product->stockBatches()
+            ->when(
+                $request->filled('status'),
+                fn ($q) => $q->where('status', $request->input('status'))
+            )
+            ->orderByDesc('received_at')
+            ->paginate((int) $request->input('per_page', 15));
+        return StockBatchResource::collection($batches);
     }
 
     public function getProductsByCategory(Request $request, $categoryId)
