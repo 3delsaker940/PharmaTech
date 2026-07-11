@@ -24,7 +24,6 @@ class ProductCardResource extends JsonResource
             'strength' => $this->strength,
             'selling_price' => $this->selling_price,
             'min_stock' => $this->min_stock,
-            'max_stock' => $this->max_stock,
             'total_quantity' => $totalQuantity,
             'nearest_expiry' => $this->nearest_expiry,
             'stock_status' => $this->resolveStockStatus($totalQuantity, $minStock),

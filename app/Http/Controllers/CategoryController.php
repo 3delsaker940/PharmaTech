@@ -16,7 +16,8 @@ class CategoryController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $categories = $this->categoryService->list(
-            $request->only(['search',  'per_page'])
+            $request->only(['search',  'per_page']),
+            null
         );
 
         return CategoryResource::collection($categories);
