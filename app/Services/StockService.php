@@ -65,11 +65,12 @@ class StockService
     }
     public function manualAdjustment(Pharmacy $pharmacy, User $user, array $data): array
     {
-        if ($data['adjustment_type'] === 'add') {
-            return $this->addStock($pharmacy, $user, $data);
-        }
-
-        return $this->removeStock($pharmacy, $user, $data);
+        return DB::transaction(function () use ($pharmacy, $user, $data) {
+            if ($data['adjustment_type'] === 'add') {
+                return $this->addStock($pharmacy, $user, $data);
+            }
+            return $this->removeStock($pharmacy, $user, $data);
+        });
     }
 
     public function bulkAdjustment(Pharmacy $pharmacy, User $user, array $items): array
@@ -102,7 +103,7 @@ class StockService
                     pharmacyId:     $invoice->pharmacy_id,
                     productId:      $batch->product_id,
                     batchId:        $batch->id,
-                    movementType:   'adjustment_out',
+                    movementType:   'supplier_return_out',
                     quantityChange: -$quantityToReverse,
                     createdBy:      $user->id,
                     referenceType:  'purchase_invoice',
@@ -147,6 +148,7 @@ class StockService
     {
         $batch = StockBatch::where('pharmacy_id', $pharmacy->id)
             ->where('id', $data['batch_id'])
+            ->lockForUpdate()
             ->firstOrFail();
 
         if ($batch->quantity_on_hand < $data['quantity']) {
@@ -184,6 +186,7 @@ class StockService
         $lastBatch = StockBatch::where('pharmacy_id', $pharmacyId)
             ->where('batch_number', 'like', $prefix . '%')
             ->orderByDesc('id')
+            ->lockForUpdate()
             ->first();
 
         $sequence = 1;
