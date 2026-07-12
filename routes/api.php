@@ -4,6 +4,7 @@ use App\Http\Controllers\CashBoxController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerReturnInvoiceController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
 use App\Http\Controllers\PurchaseInvoiceController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierDebtController;
+use App\Http\Controllers\SupplierReturnInvoiceController;
 use App\Http\Controllers\UnitController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -157,4 +159,14 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'show']);
         Route::put('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'update']);
         Route::patch('sales-invoices/{salesInvoice}/cancel', [SalesInvoiceController::class, 'cancel']);
+
+        Route::get('customer-return-invoices',[CustomerReturnInvoiceController::class, 'index']);
+        Route::post('customer-return-invoices',[CustomerReturnInvoiceController::class, 'store']);
+        Route::get('customer-return-invoices/{customerReturnInvoice}',[CustomerReturnInvoiceController::class, 'show']);
+        Route::patch('customer-return-invoices/{customerReturnInvoice}/cancel',[CustomerReturnInvoiceController::class, 'cancel']);
+
+        Route::get('supplier-return-invoices',[SupplierReturnInvoiceController::class, 'index']);
+        Route::post('supplier-return-invoices',[SupplierReturnInvoiceController::class, 'store']);
+        Route::get('supplier-return-invoices/{supplierReturnInvoice}',[SupplierReturnInvoiceController::class, 'show']);
+        Route::patch('supplier-return-invoices/{supplierReturnInvoice}/cancel',[SupplierReturnInvoiceController::class, 'cancel']);
     });
