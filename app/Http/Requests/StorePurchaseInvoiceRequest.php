@@ -50,8 +50,8 @@ class StorePurchaseInvoiceRequest extends FormRequest
             ],
             'items.*.quantity'        => ['required', 'integer', 'min:1'],
             'items.*.wholesale_price' => ['required', 'numeric', 'min:0'],
-            'items.*.tax'             => ['nullable', 'numeric', 'min:0'],
-            'items.*.discount'        => ['nullable', 'numeric', 'min:0'],
+            'items.*.tax'             => ['sometimes', 'numeric', 'min:0'],
+            'items.*.discount'        => ['sometimes', 'numeric', 'min:0'],
 
             'items.*.batch_number' => [
                 'nullable',

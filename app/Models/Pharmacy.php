@@ -53,4 +53,16 @@ class Pharmacy extends Model
     {
         return $this->hasMany(SupplierDebt::class);
     }
+    public function salesInvoices(): HasMany
+    {
+        return $this->hasMany(SalesInvoice::class);
+    }
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+    public function customerDebts(): HasMany
+    {
+        return $this->hasMany(CustomerDebt::class);
+    }
 }

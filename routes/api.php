@@ -3,9 +3,11 @@
 use App\Http\Controllers\CashBoxController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
 use App\Http\Controllers\PurchaseInvoiceController;
+use App\Http\Controllers\SalesInvoiceController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\StockMovementController;
@@ -143,4 +145,16 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::post('cash-boxes', [CashBoxController::class, 'store']);
         Route::get('cash-boxes/transactions', [CashBoxController::class, 'transactions']);
 
+        Route::get('customers', [CustomerController::class, 'index']);
+        Route::post('customers', [CustomerController::class, 'store']);
+        Route::get('customers/{customer}',[CustomerController::class, 'show']);
+        Route::put('customers/{customer}', [CustomerController::class, 'update']);
+        Route::delete('customers/{customer}', [CustomerController::class, 'destroy']);
+        Route::patch('customers/{customer}/restore',[CustomerController::class, 'restore'])->withTrashed();
+
+        Route::get('sales-invoices', [SalesInvoiceController::class, 'index']);
+        Route::post('sales-invoices', [SalesInvoiceController::class, 'store']);
+        Route::get('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'show']);
+        Route::put('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'update']);
+        Route::patch('sales-invoices/{salesInvoice}/cancel', [SalesInvoiceController::class, 'cancel']);
     });

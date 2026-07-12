@@ -13,7 +13,7 @@ trait AuthorizesPharmacyResource
     protected function authorizePharmacyResource(Request $request, int $resourcePharmacyId): void
     {
         $pharmacy = $request->attributes->get('pharmacy');
-
+        //dd($pharmacy->id, $resourcePharmacyId, $pharmacy->id !== $resourcePharmacyId);
         abort_if(
             $pharmacy->id !== $resourcePharmacyId,
             403,
