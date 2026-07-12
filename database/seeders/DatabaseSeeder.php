@@ -53,6 +53,8 @@ class DatabaseSeeder extends Seeder
             PurchaseInvoiceSeeder::class,
             CustomerSeeder::class,
             SalesInvoiceSeeder::class,
+            SupplierReturnInvoiceSeeder::class,
+            CustomerReturnInvoiceSeeder::class,
         ]);
     }
 }
