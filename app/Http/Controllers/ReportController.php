@@ -35,6 +35,37 @@ class ReportController extends Controller
         );
         return response()->json(['data' => $data], 200);
     }
+    public function supplierPrices(Request $request): JsonResponse
+    {
+        $request->validate([
+            'product_id' => ['sometimes', 'integer', 'exists:products,id'],
+            'date_from' => ['sometimes', 'date'],
+            'date_to' => ['sometimes', 'date', 'after_or_equal:date_from'],
+        ]);
+        $data = $this->reportService->getSupplierPrices(
+            $request->attributes->get('pharmacy'),
+            $request->only(['product_id', 'date_from', 'date_to'])
+        );
+        return response()->json(['data' => $data], 200);
+    }
+    public function inventoryValue(Request $request): JsonResponse
+    {
+        $data = $this->reportService->getInventoryValue(
+            $request->attributes->get('pharmacy')
+        );
+        return response()->json(['data' => $data], 200);
+    }
+    public function stockHealth(Request $request): JsonResponse
+    {
+        $request->validate([
+            'expiry_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
+        ]);
+        $data = $this->reportService->getStockHealth(
+            $request->attributes->get('pharmacy'),
+            $request->only(['expiry_days'])
+        );
+        return response()->json(['data' => $data], 200);
+    }
     public function sales(Request $request): JsonResponse
     {
         $request->validate([

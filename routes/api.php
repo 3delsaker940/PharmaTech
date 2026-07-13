@@ -187,4 +187,7 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('reports/sales', [ReportController::class, 'sales']);
         Route::get('reports/top-products', [ReportController::class, 'topProducts']);
         Route::get('reports/profit', [ReportController::class, 'profit']);
+        Route::get('reports/supplier-prices', [ReportController::class, 'supplierPrices']);
+        Route::get('reports/inventory-value', [ReportController::class, 'inventoryValue']);
+        Route::get('reports/stock-health', [ReportController::class, 'stockHealth']);
     });
