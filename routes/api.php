@@ -155,6 +155,7 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('cash-boxes', [CashBoxController::class, 'show']);
         Route::post('cash-boxes', [CashBoxController::class, 'store']);
         Route::get('cash-boxes/transactions', [CashBoxController::class, 'transactions']);
+        Route::get('cash-boxes/statistics', [CashBoxController::class, 'statistics']);
 
         Route::get('customers', [CustomerController::class, 'index']);
         Route::post('customers', [CustomerController::class, 'store']);
