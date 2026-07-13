@@ -149,7 +149,7 @@ class CashBoxService
     ): CashTransaction {
         $transaction = CashTransaction::create([
             'cash_box_id'=> $cashBox->id,
-            'transaction_type'=> 'manual_in',
+            'transaction_type'=> 'supplier_return_in',
             'amount'=> $invoice->refund_total,
             'reference_type'=> 'supplier_return_invoice',
             'reference_id'=> $invoice->id,
