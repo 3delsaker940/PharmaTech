@@ -439,7 +439,7 @@ class ReportService
             ->where('products.pharmacy_id', $pharmacyId)
             ->whereNull('products.deleted_at')
             ->whereNotIn('products.id', $soldProductIds)
-            ->where($activeStock, '>', 0)
+            ->whereRaw('(' . $activeStock->toSql() . ') > 0', $activeStock->getBindings())
             ->selectRaw('
                 products.id as product_id,
                 products.brand_name,
