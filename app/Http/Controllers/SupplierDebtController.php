@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Http\Concerns\AuthorizesPharmacyResource;
+use App\Http\Requests\RecordSupplierDebtPaymentRequest;
 use App\Http\Resources\SupplierDebtResource;
 use App\Models\SupplierDebt;
+use App\Services\SupplierDebtService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SupplierDebtController extends Controller
 {
     use AuthorizesPharmacyResource;
+
+    public function __construct(private readonly SupplierDebtService $supplierDebtService) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {
@@ -40,5 +44,19 @@ class SupplierDebtController extends Controller
         $supplierDebt->load(['supplier', 'payments.createdBy']);
 
         return new SupplierDebtResource($supplierDebt);
+    }
+    public function pay(
+        RecordSupplierDebtPaymentRequest $request,
+        SupplierDebt                     $supplierDebt
+    ): SupplierDebtResource {
+        $this->authorizePharmacyResource($request, $supplierDebt->pharmacy_id);
+
+        $updated = $this->supplierDebtService->recordPayment(
+            $supplierDebt,
+            $request->user(),
+            $request->validated()
+        );
+
+        return new SupplierDebtResource($updated);
     }
 }

@@ -26,6 +26,9 @@ class CustomerDebtResource extends JsonResource
             'customer' => $this->customer
                 ? new CustomerResource($this->customer)
                 : null,
+            'payments' => CustomerDebtPaymentResource::collection(
+                $this->whenLoaded('payments')
+            ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

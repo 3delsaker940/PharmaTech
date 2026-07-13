@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CustomerDebt extends Model
 {
@@ -25,5 +26,9 @@ class CustomerDebt extends Model
     public function salesInvoice(): BelongsTo
     {
         return $this->belongsTo(SalesInvoice::class);
+    }
+    public function payments(): HasMany
+    {
+        return $this->hasMany(CustomerDebtPayment::class);
     }
 }
