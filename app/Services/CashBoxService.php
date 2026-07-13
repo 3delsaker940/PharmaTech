@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Models\CashBox;
 use App\Models\CashTransaction;
+use App\Models\CustomerDebt;
 use App\Models\CustomerReturnInvoice;
 use App\Models\PurchaseInvoice;
 use App\Models\SalesInvoice;
+use App\Models\SupplierDebt;
 use App\Models\SupplierReturnInvoice;
 use App\Models\User;
 
@@ -175,6 +177,47 @@ class CashBoxService
             'transaction_time'=> now(),
         ]);
         $cashBox->decrement('current_balance', $invoice->refund_total);
+        return $transaction;
+    }
+
+    //customer debt payment
+    public function recordCustomerDebtPayment(
+        CashBox $cashBox,
+        CustomerDebt $debt,
+        float $amount,
+        User $user
+    ): CashTransaction {
+        $transaction = CashTransaction::create([
+            'cash_box_id' => $cashBox->id,
+            'transaction_type' => 'customer_debt_payment_in',
+            'amount' => $amount,
+            'reference_type' => 'customer_debt',
+            'reference_id' => $debt->id,
+            'created_by' => $user->id,
+            'notes' => "Debt payment received — customer debt #{$debt->id}",
+            'transaction_time' => now(),
+        ]);
+        $cashBox->increment('current_balance', $amount);
+        return $transaction;
+    }
+    //supplier debt payment
+    public function recordSupplierDebtPayment(
+        CashBox $cashBox,
+        SupplierDebt $debt,
+        float $amount,
+        User $user
+    ): CashTransaction {
+        $transaction = CashTransaction::create([
+            'cash_box_id' => $cashBox->id,
+            'transaction_type' => 'supplier_debt_payment_out',
+            'amount' => $amount,
+            'reference_type' => 'supplier_debt',
+            'reference_id' => $debt->id,
+            'created_by' => $user->id,
+            'notes' => "Debt payment to supplier — supplier debt #{$debt->id}",
+            'transaction_time' => now(),
+        ]);
+        $cashBox->decrement('current_balance', $amount);
         return $transaction;
     }
 }

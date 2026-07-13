@@ -4,6 +4,7 @@ use App\Http\Controllers\CashBoxController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\CustomerDebtController;
 use App\Http\Controllers\CustomerReturnInvoiceController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
@@ -125,6 +126,12 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
 
         Route::get('supplier-debts',                 [SupplierDebtController::class, 'index']);
         Route::get('supplier-debts/{supplierDebt}',  [SupplierDebtController::class, 'show']);
+        Route::post('supplier-debts/{supplierDebt}/pay',[SupplierDebtController::class, 'pay']);
+
+        Route::get('customer-debts',[CustomerDebtController::class, 'index']);
+        Route::get('customer-debts/{customerDebt}',[CustomerDebtController::class, 'show']);
+        Route::post('customer-debts/{customerDebt}/pay',[CustomerDebtController::class, 'pay']);
+
 
         Route::get('purchase-invoices',                    [PurchaseInvoiceController::class, 'index']);
         Route::post('purchase-invoices',                   [PurchaseInvoiceController::class, 'store']);
@@ -169,4 +176,6 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::post('supplier-return-invoices',[SupplierReturnInvoiceController::class, 'store']);
         Route::get('supplier-return-invoices/{supplierReturnInvoice}',[SupplierReturnInvoiceController::class, 'show']);
         Route::patch('supplier-return-invoices/{supplierReturnInvoice}/cancel',[SupplierReturnInvoiceController::class, 'cancel']);
+
+
     });

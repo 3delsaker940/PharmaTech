@@ -51,8 +51,10 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             CashBoxSeeder::class,
             PurchaseInvoiceSeeder::class,
+            SupplierDebtPaymentSeeder::class,
             CustomerSeeder::class,
             SalesInvoiceSeeder::class,
+            CustomerDebtPaymentSeeder::class,
             SupplierReturnInvoiceSeeder::class,
             CustomerReturnInvoiceSeeder::class,
         ]);
