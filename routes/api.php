@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
 use App\Http\Controllers\PurchaseInvoiceController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SalesInvoiceController;
 use App\Http\Controllers\StockAdjustmentController;
 use App\Http\Controllers\StockBatchController;
@@ -182,4 +183,8 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('dashboard/cards', [DashboardController::class, 'cards']);
         Route::get('dashboard/weekly-revenue',[DashboardController::class, 'weeklyRevenue']);
         Route::get('dashboard/transactions',[DashboardController::class, 'transactions']);
+
+        Route::get('reports/sales', [ReportController::class, 'sales']);
+        Route::get('reports/top-products', [ReportController::class, 'topProducts']);
+        Route::get('reports/profit', [ReportController::class, 'profit']);
     });
