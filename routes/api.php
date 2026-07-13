@@ -6,6 +6,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\CustomerDebtController;
 use App\Http\Controllers\CustomerReturnInvoiceController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductMedicalInfoController;
 use App\Http\Controllers\PurchaseInvoiceController;
@@ -177,5 +178,8 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('supplier-return-invoices/{supplierReturnInvoice}',[SupplierReturnInvoiceController::class, 'show']);
         Route::patch('supplier-return-invoices/{supplierReturnInvoice}/cancel',[SupplierReturnInvoiceController::class, 'cancel']);
 
-
+        Route::get('dashboard/header', [DashboardController::class, 'header']);
+        Route::get('dashboard/cards', [DashboardController::class, 'cards']);
+        Route::get('dashboard/weekly-revenue',[DashboardController::class, 'weeklyRevenue']);
+        Route::get('dashboard/transactions',[DashboardController::class, 'transactions']);
     });
