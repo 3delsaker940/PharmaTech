@@ -51,20 +51,30 @@ class CashBoxController extends Controller
 
         return new CashBoxResource($cashBox);
     }
-
-    public function transactions(Request $request): AnonymousResourceCollection
+    public function transactions(Request $request)
     {
         $pharmacy = $request->attributes->get('pharmacy');
-
         $cashBox = CashBox::where('pharmacy_id', $pharmacy->id)->firstOrFail();
 
         $transactions = $cashBox->transactions()
-            ->when(
-                $request->filled('transaction_type'),
-                fn ($q) => $q->where('transaction_type', $request->input('transaction_type'))
-            )
+            ->when($request->filled('transaction_type'), function ($q) use ($request) {
+                $q->where('transaction_type', $request->input('transaction_type'));
+            })
+            ->when($request->filled('reference_type'), function ($q) use ($request) {
+                $q->where('reference_type', $request->input('reference_type'));
+            })
+            ->when($request->filled('date'), function ($q) use ($request) {
+                $q->whereDate('transaction_time', $request->input('date'));
+            })
+            ->when(! $request->filled('date') && $request->filled('date_from'), function ($q) use ($request) {
+                $q->whereDate('transaction_time', '>=', $request->input('date_from'));
+            })
+            ->when(! $request->filled('date') && $request->filled('date_to'), function ($q) use ($request) {
+                $q->whereDate('transaction_time', '<=', $request->input('date_to'));
+            })
             ->with('createdBy')
             ->orderByDesc('transaction_time')
+            ->orderByDesc('id')
             ->paginate((int) $request->input('per_page', 15));
 
         return CashTransactionResource::collection($transactions);
