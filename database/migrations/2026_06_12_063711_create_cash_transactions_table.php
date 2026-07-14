@@ -30,6 +30,7 @@ return new class extends Migration
             $table->foreignId('created_by')->constrained('users');
             $table->text('notes')->nullable();
             $table->dateTime('transaction_time');
+            $table->decimal('balance_after', 12, 2)->default(0.00);
             $table->timestamps();
 
             $table->index(['cash_box_id', 'transaction_type']);

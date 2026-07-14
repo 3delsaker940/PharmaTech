@@ -22,6 +22,7 @@ class CashTransactionResource extends JsonResource
             'reference_id'     => $this->reference_id,
             'notes'            => $this->notes,
             'transaction_time' => $this->transaction_time,
+            'balance_after' => $this->balance_after,
 
             'created_by' => new UserResource($this->whenLoaded('createdBy')),
 

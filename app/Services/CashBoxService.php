@@ -35,6 +35,7 @@ class CashBoxService
             'created_by'       => $user->id,
             'notes'            => "Payment for purchase invoice {$invoice->invoice_number}",
             'transaction_time' => now(),
+            'balance_after' => round($cashBox->current_balance - $amount, 2),
         ]);
 
         $cashBox->decrement('current_balance', $amount);
@@ -45,6 +46,7 @@ class CashBoxService
     public function refundFromCancellation(
         CashBox $cashBox,
         PurchaseInvoice $invoice,
+        //float $amount,
         User $user
     ): CashTransaction {
         $transaction = CashTransaction::create([
@@ -56,6 +58,7 @@ class CashBoxService
             'created_by'       => $user->id,
             'notes'            => "Refund — invoice {$invoice->invoice_number} cancelled",
             'transaction_time' => now(),
+            'balance_after' => round($cashBox->current_balance + $invoice->amount_paid, 2),
         ]);
 
         $cashBox->increment('current_balance', $invoice->amount_paid);
@@ -79,6 +82,7 @@ class CashBoxService
             'created_by' => $user->id,
             'notes'=> "Payment received — sales invoice {$invoice->invoice_number}",
             'transaction_time' => now(),
+            'balance_after' => round($cashBox->current_balance + $amount, 2),
         ]);
         $cashBox->increment('current_balance', $amount);
         return $transaction;
@@ -86,6 +90,7 @@ class CashBoxService
     public function refundFromSaleCancellation(
         CashBox $cashBox,
         SalesInvoice $invoice,
+        //float $amount,
         User $user
     ): CashTransaction {
         $transaction = CashTransaction::create([
@@ -97,6 +102,7 @@ class CashBoxService
             'created_by' => $user->id,
             'notes' => "Refund — sales invoice {$invoice->invoice_number} cancelled",
             'transaction_time' => now(),
+            'balance_after' => round($cashBox->current_balance - $invoice->amount_paid, 2),
         ]);
         $cashBox->decrement('current_balance', $invoice->amount_paid);
         return $transaction;
@@ -106,6 +112,7 @@ class CashBoxService
     public function recordForCustomerReturn(
         CashBox $cashBox,
         CustomerReturnInvoice  $invoice,
+        //float $amount,
         User $user
     ): CashTransaction {
         $transaction = CashTransaction::create([
@@ -117,6 +124,7 @@ class CashBoxService
             'created_by'=> $user->id,
             'notes'=> "Refund to customer — return invoice {$invoice->invoice_number}",
             'transaction_time'=> now(),
+            'balance_after' => round($cashBox->current_balance - $invoice->refund_total, 2),
         ]);
         $cashBox->decrement('current_balance', $invoice->refund_total);
         return $transaction;
@@ -125,6 +133,7 @@ class CashBoxService
     public function reverseCustomerReturn(
         CashBox $cashBox,
         CustomerReturnInvoice $invoice,
+        //float $amount,
         User $user
     ): CashTransaction {
         $transaction = CashTransaction::create([
@@ -136,6 +145,7 @@ class CashBoxService
             'created_by'=> $user->id,
             'notes'=> "Reversal — customer return invoice {$invoice->invoice_number} cancelled",
             'transaction_time' => now(),
+            'balance_after' => round($cashBox->current_balance + $invoice->refund_total, 2),
         ]);
         $cashBox->increment('current_balance', $invoice->refund_total);
         return $transaction;
@@ -145,6 +155,7 @@ class CashBoxService
     public function recordForSupplierReturn(
         CashBox $cashBox,
         SupplierReturnInvoice $invoice,
+        //float $amount,
         User $user
     ): CashTransaction {
         $transaction = CashTransaction::create([
@@ -156,6 +167,7 @@ class CashBoxService
             'created_by'=> $user->id,
             'notes'=> "Refund from supplier — return invoice {$invoice->invoice_number}",
             'transaction_time'=> now(),
+            'balance_after' => round($cashBox->current_balance + $invoice->refund_total, 2),
         ]);
         $cashBox->increment('current_balance', $invoice->refund_total);
         return $transaction;
@@ -164,6 +176,7 @@ class CashBoxService
     public function reverseSupplierReturn(
         CashBox $cashBox,
         SupplierReturnInvoice $invoice,
+        float $amount,
         User $user
     ): CashTransaction {
         $transaction = CashTransaction::create([
@@ -175,6 +188,7 @@ class CashBoxService
             'created_by'=> $user->id,
             'notes'=> "Reversal — supplier return invoice {$invoice->invoice_number} cancelled",
             'transaction_time'=> now(),
+            'balance_after' => round($cashBox->current_balance - $amount, 2),
         ]);
         $cashBox->decrement('current_balance', $invoice->refund_total);
         return $transaction;
@@ -196,6 +210,7 @@ class CashBoxService
             'created_by' => $user->id,
             'notes' => "Debt payment received — customer debt #{$debt->id}",
             'transaction_time' => now(),
+            'balance_after' => round($cashBox->current_balance + $amount, 2),
         ]);
         $cashBox->increment('current_balance', $amount);
         return $transaction;
@@ -216,6 +231,7 @@ class CashBoxService
             'created_by' => $user->id,
             'notes' => "Debt payment to supplier — supplier debt #{$debt->id}",
             'transaction_time' => now(),
+            'balance_after' => round($cashBox->current_balance - $amount, 2),
         ]);
         $cashBox->decrement('current_balance', $amount);
         return $transaction;

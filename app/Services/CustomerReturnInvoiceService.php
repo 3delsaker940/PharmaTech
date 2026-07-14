@@ -85,6 +85,10 @@ class CustomerReturnInvoiceService
                 fn ($q) => $q->where('customer_id', $filters['customer_id'])
             )
             ->when(
+                filled($filters['original_sales_invoice_id'] ?? null),
+                fn ($q) => $q->where('original_sales_invoice_id', $filters['original_sales_invoice_id'])
+            )
+            ->when(
                 filled($filters['date_from'] ?? null),
                 fn ($q) => $q->whereDate('invoice_date', '>=', $filters['date_from'])
             )
