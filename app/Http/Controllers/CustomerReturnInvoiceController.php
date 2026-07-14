@@ -23,7 +23,7 @@ class CustomerReturnInvoiceController extends Controller
     {
         $invoices = $this->customerReturnInvoiceService->list(
             $request->attributes->get('pharmacy'),
-            $request->only(['status', 'customer_id', 'date_from', 'date_to', 'per_page'])
+            $request->only(['status', 'customer_id', 'original_sales_invoice_id', 'date_from', 'date_to', 'per_page'])
         );
         return CustomerReturnInvoiceResource::collection($invoices);
     }
