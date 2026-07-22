@@ -22,6 +22,7 @@ class ProductCardResource extends JsonResource
             'brand_name' => $this->brand_name,
             'ar_name' => $this->ar_name,
             'strength' => $this->strength,
+            'buying_price' => $this->buying_price,
             'selling_price' => $this->selling_price,
             'min_stock' => $this->min_stock,
             'total_quantity' => $totalQuantity,
