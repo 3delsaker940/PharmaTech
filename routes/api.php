@@ -18,6 +18,7 @@ use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierDebtController;
 use App\Http\Controllers\SupplierReturnInvoiceController;
+use App\Http\Controllers\WeatherDrivenInventoryController;
 use App\Http\Controllers\UnitController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -128,11 +129,11 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
 
         Route::get('supplier-debts',                 [SupplierDebtController::class, 'index']);
         Route::get('supplier-debts/{supplierDebt}',  [SupplierDebtController::class, 'show']);
-        Route::post('supplier-debts/{supplierDebt}/pay',[SupplierDebtController::class, 'pay']);
+        Route::post('supplier-debts/{supplierDebt}/pay', [SupplierDebtController::class, 'pay']);
 
-        Route::get('customer-debts',[CustomerDebtController::class, 'index']);
-        Route::get('customer-debts/{customerDebt}',[CustomerDebtController::class, 'show']);
-        Route::post('customer-debts/{customerDebt}/pay',[CustomerDebtController::class, 'pay']);
+        Route::get('customer-debts', [CustomerDebtController::class, 'index']);
+        Route::get('customer-debts/{customerDebt}', [CustomerDebtController::class, 'show']);
+        Route::post('customer-debts/{customerDebt}/pay', [CustomerDebtController::class, 'pay']);
 
 
         Route::get('purchase-invoices',                    [PurchaseInvoiceController::class, 'index']);
@@ -141,16 +142,16 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::put('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'update']);
         Route::patch('purchase-invoices/{purchaseInvoice}/cancel', [PurchaseInvoiceController::class, 'cancel']);
 
-        Route::get('stock-batches',[StockBatchController::class, 'index']);
+        Route::get('stock-batches', [StockBatchController::class, 'index']);
         Route::get('stock-batches/{stockBatch}', [StockBatchController::class, 'show']);
         Route::patch('stock-batches/{stockBatch}/mark-expired', [StockBatchController::class, 'markExpired']);
 
         Route::get('stock-movements', [StockMovementController::class, 'index']);
-        Route::get('stock-movements/{stockMovement}',[StockMovementController::class, 'show']);
+        Route::get('stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
 
         Route::get('stock-adjustments', [StockAdjustmentController::class, 'index']);
         Route::post('stock-adjustments',  [StockAdjustmentController::class, 'store']);
-        Route::post('stock-adjustments/bulk',[StockAdjustmentController::class, 'bulkStore']);
+        Route::post('stock-adjustments/bulk', [StockAdjustmentController::class, 'bulkStore']);
 
         Route::get('cash-boxes', [CashBoxController::class, 'show']);
         Route::post('cash-boxes', [CashBoxController::class, 'store']);
@@ -159,10 +160,10 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
 
         Route::get('customers', [CustomerController::class, 'index']);
         Route::post('customers', [CustomerController::class, 'store']);
-        Route::get('customers/{customer}',[CustomerController::class, 'show']);
+        Route::get('customers/{customer}', [CustomerController::class, 'show']);
         Route::put('customers/{customer}', [CustomerController::class, 'update']);
         Route::delete('customers/{customer}', [CustomerController::class, 'destroy']);
-        Route::patch('customers/{customer}/restore',[CustomerController::class, 'restore'])->withTrashed();
+        Route::patch('customers/{customer}/restore', [CustomerController::class, 'restore'])->withTrashed();
 
         Route::get('sales-invoices', [SalesInvoiceController::class, 'index']);
         Route::post('sales-invoices', [SalesInvoiceController::class, 'store']);
@@ -170,20 +171,20 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::put('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'update']);
         Route::patch('sales-invoices/{salesInvoice}/cancel', [SalesInvoiceController::class, 'cancel']);
 
-        Route::get('customer-return-invoices',[CustomerReturnInvoiceController::class, 'index']);
-        Route::post('customer-return-invoices',[CustomerReturnInvoiceController::class, 'store']);
-        Route::get('customer-return-invoices/{customerReturnInvoice}',[CustomerReturnInvoiceController::class, 'show']);
-        Route::patch('customer-return-invoices/{customerReturnInvoice}/cancel',[CustomerReturnInvoiceController::class, 'cancel']);
+        Route::get('customer-return-invoices', [CustomerReturnInvoiceController::class, 'index']);
+        Route::post('customer-return-invoices', [CustomerReturnInvoiceController::class, 'store']);
+        Route::get('customer-return-invoices/{customerReturnInvoice}', [CustomerReturnInvoiceController::class, 'show']);
+        Route::patch('customer-return-invoices/{customerReturnInvoice}/cancel', [CustomerReturnInvoiceController::class, 'cancel']);
 
-        Route::get('supplier-return-invoices',[SupplierReturnInvoiceController::class, 'index']);
-        Route::post('supplier-return-invoices',[SupplierReturnInvoiceController::class, 'store']);
-        Route::get('supplier-return-invoices/{supplierReturnInvoice}',[SupplierReturnInvoiceController::class, 'show']);
-        Route::patch('supplier-return-invoices/{supplierReturnInvoice}/cancel',[SupplierReturnInvoiceController::class, 'cancel']);
+        Route::get('supplier-return-invoices', [SupplierReturnInvoiceController::class, 'index']);
+        Route::post('supplier-return-invoices', [SupplierReturnInvoiceController::class, 'store']);
+        Route::get('supplier-return-invoices/{supplierReturnInvoice}', [SupplierReturnInvoiceController::class, 'show']);
+        Route::patch('supplier-return-invoices/{supplierReturnInvoice}/cancel', [SupplierReturnInvoiceController::class, 'cancel']);
 
         Route::get('dashboard/header', [DashboardController::class, 'header']);
         Route::get('dashboard/cards', [DashboardController::class, 'cards']);
-        Route::get('dashboard/weekly-revenue',[DashboardController::class, 'weeklyRevenue']);
-        Route::get('dashboard/transactions',[DashboardController::class, 'transactions']);
+        Route::get('dashboard/weekly-revenue', [DashboardController::class, 'weeklyRevenue']);
+        Route::get('dashboard/transactions', [DashboardController::class, 'transactions']);
 
         Route::get('reports/sales', [ReportController::class, 'sales']);
         Route::get('reports/top-products', [ReportController::class, 'topProducts']);
@@ -191,4 +192,5 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('reports/supplier-prices', [ReportController::class, 'supplierPrices']);
         Route::get('reports/inventory-value', [ReportController::class, 'inventoryValue']);
         Route::get('reports/stock-health', [ReportController::class, 'stockHealth']);
+        Route::get('/inventory/predict-needs', [WeatherDrivenInventoryController::class, 'predictInventoryNeeds']);
     });
