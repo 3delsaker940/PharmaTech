@@ -19,6 +19,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierDebtController;
 use App\Http\Controllers\SupplierReturnInvoiceController;
 use App\Http\Controllers\WeatherDrivenInventoryController;
+use App\Http\Controllers\DrugInteractionController;
 use App\Http\Controllers\UnitController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -193,4 +194,5 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('reports/inventory-value', [ReportController::class, 'inventoryValue']);
         Route::get('reports/stock-health', [ReportController::class, 'stockHealth']);
         Route::get('/inventory/predict-needs', [WeatherDrivenInventoryController::class, 'predictInventoryNeeds']);
+        Route::post('/inventory/check-drug-interactions', [DrugInteractionController::class, 'checkInteractions']);
     });
