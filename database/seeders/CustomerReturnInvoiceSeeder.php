@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\SalesInvoice;
 use App\Models\User;
 use App\Services\CustomerReturnInvoiceService;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 class CustomerReturnInvoiceSeeder extends Seeder
@@ -48,11 +49,13 @@ class CustomerReturnInvoiceSeeder extends Seeder
         /** @var CustomerReturnInvoiceService $service */
         $service = app(CustomerReturnInvoiceService::class);
 
+        $today = Carbon::today();
+
         // Return 1 — linked to original sales invoice, cash refund
         $service->store($pharmacy, $owner, [
             'customer_id'               => $customer->id,
             'original_sales_invoice_id' => $originalInvoice?->id,
-            'invoice_date'              => '2026-07-05',
+            'invoice_date'              => $today->copy()->subDay()->toDateString(),
             'refund_method'             => 'cash',
             'reason'                    => 'Product damaged',
             'notes'                     => 'Seeded — customer return with original invoice',
@@ -71,7 +74,7 @@ class CustomerReturnInvoiceSeeder extends Seeder
         $service->store($pharmacy, $owner, [
             'customer_id'               => null,
             'original_sales_invoice_id' => null,
-            'invoice_date'              => '2026-07-06',
+            'invoice_date'              => $today->toDateString(),
             'refund_method'             => 'credit',
             'reason'                    => 'Wrong product dispensed',
             'notes'                     => 'Seeded — walk-in return, credit refund',

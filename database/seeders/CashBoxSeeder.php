@@ -15,7 +15,7 @@ class CashBoxSeeder extends Seeder
     {
         $pharmacy = Pharmacy::first();
 
-        if (! $pharmacy ) {
+        if (! $pharmacy) {
             $this->command->warn('No pharmacy found. Run DatabaseSeeder first.');
             return;
         }

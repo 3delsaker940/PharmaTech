@@ -13,10 +13,12 @@ class CategorySeeder extends Seeder
         $categories = [
             [
                 'name'        => 'Antibiotics',
-                'description' => 'Antibiotics',],
+                'description' => 'Antibiotics',
+            ],
             [
                 'name'        => 'Painkillers',
-                'description' => 'Painkillers',],
+                'description' => 'Painkillers',
+            ],
             [
                 'name'        => 'Digestive',
                 'description' => 'Digestive',

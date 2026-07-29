@@ -8,6 +8,7 @@ use App\Models\PurchaseInvoice;
 use App\Models\Supplier;
 use App\Models\User;
 use App\Services\SupplierReturnInvoiceService;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 class SupplierReturnInvoiceSeeder extends Seeder
@@ -52,11 +53,13 @@ class SupplierReturnInvoiceSeeder extends Seeder
         /** @var SupplierReturnInvoiceService $service */
         $service = app(SupplierReturnInvoiceService::class);
 
+        $today = Carbon::today();
+
         // Return 1 — linked to original purchase invoice, cash refund
         $service->store($pharmacy, $owner, [
             'supplier_id'                  => $supplier->id,
             'original_purchase_invoice_id' => $originalInvoice?->id,
-            'invoice_date'                 => '2026-07-04',
+            'invoice_date'                 => $today->copy()->subDays(2)->toDateString(),
             'refund_method'                => 'cash',
             'reason'                       => 'Expired products received',
             'notes'                        => 'Seeded — supplier return with original invoice',
@@ -75,7 +78,7 @@ class SupplierReturnInvoiceSeeder extends Seeder
         $service->store($pharmacy, $owner, [
             'supplier_id'                  => $supplier->id,
             'original_purchase_invoice_id' => null,
-            'invoice_date'                 => '2026-07-05',
+            'invoice_date'                 => $today->toDateString(),
             'refund_method'                => 'credit',
             'reason'                       => 'Damaged packaging',
             'notes'                        => 'Seeded — supplier return, credit refund',
