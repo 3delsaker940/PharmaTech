@@ -25,6 +25,34 @@ class AuthController extends Controller
 {
     private const ACCESS_TOKEN_MINUTES = 15;
 
+    public function updateFcmToken(Request $request)
+    {
+        try {
+            $request->validate([
+                'fcm_token' => 'required|string',
+            ]);
+
+            $request->user()->update([
+                'fcm_token' => $request->fcm_token
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'FCM token updated successfully.'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating FCM token', [
+                'error' => $e->getMessage(),
+                'user_id' => $request->user()->id ?? null,
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update FCM token.'
+            ], 500);
+        }
+    }
+
     private function issueTokenPair(
         User $user,
         Request $request,
@@ -144,6 +172,10 @@ class AuthController extends Controller
 
             $user->load('pharmacy.city');
 
+            if ($request->filled('fcm_token')) {
+                $user->update(['fcm_token' => $request->fcm_token]);
+            }
+
             return (new LoginResource(
                 $user,
                 $tokens['access_token'],
@@ -198,7 +230,7 @@ class AuthController extends Controller
     public function logout(Request $request, RefreshTokenService $refreshTokenService)
     {
         $request->user()->currentAccessToken()?->delete();
-
+        $request->user()->update(['fcm_token' => null]);
         if ($request->filled('refresh_token')) {
             $refreshTokenService->revokeByPlainToken($request->refresh_token);
         }
@@ -211,6 +243,7 @@ class AuthController extends Controller
     public function  logoutAll(Request $request, RefreshTokenService $refreshTokenService)
     {
         $request->user()->tokens()->delete();
+        $request->user()->update(['fcm_token' => null]);
         $refreshTokenService->revokeAllForUser($request->user());
 
         return response()->json([
@@ -364,6 +397,11 @@ class AuthController extends Controller
             );
 
             $user->load('pharmacy.city');
+
+            if ($request->filled('fcm_token')) {
+                $user->update(['fcm_token' => $request->fcm_token]);
+            }
+
             return (new LoginResource(
                 $user,
                 $tokens['access_token'],

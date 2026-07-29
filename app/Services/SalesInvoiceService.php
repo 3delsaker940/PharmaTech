@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Customer;
 use App\Models\CustomerDebt;
 use App\Models\Pharmacy;
 use App\Models\Product;

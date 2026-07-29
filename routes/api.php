@@ -195,4 +195,5 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('reports/stock-health', [ReportController::class, 'stockHealth']);
         Route::get('/inventory/predict-needs', [WeatherDrivenInventoryController::class, 'predictInventoryNeeds']);
         Route::post('/inventory/check-drug-interactions', [DrugInteractionController::class, 'checkInteractions']);
+        Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
     });
