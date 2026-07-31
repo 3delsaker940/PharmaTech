@@ -31,20 +31,20 @@ class SupplierReturnInvoiceService
             $refundTotal = $totals['refund_total'];
 
             $invoice = SupplierReturnInvoice::create([
-                'pharmacy_id'=> $pharmacy->id,
-                'supplier_id'=> $data['supplier_id'],
-                'original_purchase_invoice_id'=> $data['original_purchase_invoice_id'] ?? null,
-                'created_by'=> $user->id,
-                'invoice_number'=> $this->generateInvoiceNumber($pharmacy->id),
-                'invoice_date'=> $data['invoice_date'],
-                'subtotal'=> $totals['subtotal'],
-                'tax_total'=> $totals['tax_total'],
-                'discount_total'=> $totals['discount_total'],
-                'refund_total'=> $refundTotal,
-                'refund_method'=> $data['refund_method'],
-                'status'=> 'completed',
-                'reason'=> $data['reason'] ?? null,
-                'notes'=> $data['notes'] ?? null,
+                'pharmacy_id' => $pharmacy->id,
+                'supplier_id' => $data['supplier_id'],
+                'original_purchase_invoice_id' => $data['original_purchase_invoice_id'] ?? null,
+                'created_by' => $user->id,
+                'invoice_number' => $this->generateInvoiceNumber($pharmacy->id),
+                'invoice_date' => $data['invoice_date'],
+                'subtotal' => $totals['subtotal'],
+                'tax_total' => $totals['tax_total'],
+                'discount_total' => $totals['discount_total'],
+                'refund_total' => $refundTotal,
+                'refund_method' => $data['refund_method'],
+                'status' => 'completed',
+                'reason' => $data['reason'] ?? null,
+                'notes' => $data['notes'] ?? null,
             ]);
 
             foreach ($data['items'] as $itemData) {
@@ -75,7 +75,7 @@ class SupplierReturnInvoiceService
             if ($invoice->refund_method === 'cash' && $invoice->refund_total > 0) {
                 $cashBox = $this->cashBoxService->getCashBox($invoice->pharmacy_id);
                 if ($cashBox) {
-                    $this->cashBoxService->reverseSupplierReturn($cashBox, $invoice, $user);
+                    $this->cashBoxService->reverseSupplierReturn($cashBox, $invoice, $invoice->refund_total, $user);
                 }
             }
             return $invoice->fresh(['items.product', 'supplier', 'originalPurchaseInvoice', 'createdBy']);
@@ -87,19 +87,19 @@ class SupplierReturnInvoiceService
         return SupplierReturnInvoice::where('pharmacy_id', $pharmacy->id)
             ->when(
                 filled($filters['status'] ?? null),
-                fn ($q) => $q->where('status', $filters['status'])
+                fn($q) => $q->where('status', $filters['status'])
             )
             ->when(
                 filled($filters['supplier_id'] ?? null),
-                fn ($q) => $q->where('supplier_id', $filters['supplier_id'])
+                fn($q) => $q->where('supplier_id', $filters['supplier_id'])
             )
             ->when(
                 filled($filters['date_from'] ?? null),
-                fn ($q) => $q->whereDate('invoice_date', '>=', $filters['date_from'])
+                fn($q) => $q->whereDate('invoice_date', '>=', $filters['date_from'])
             )
             ->when(
                 filled($filters['date_to'] ?? null),
-                fn ($q) => $q->whereDate('invoice_date', '<=', $filters['date_to'])
+                fn($q) => $q->whereDate('invoice_date', '<=', $filters['date_to'])
             )
             ->with(['supplier', 'createdBy'])
             ->orderByDesc('created_at')
@@ -111,9 +111,9 @@ class SupplierReturnInvoiceService
         User $user,
         array $itemData
     ): void {
-        $productId= $itemData['product_id'];
-        $quantity= (int) $itemData['quantity'];
-        $remainingNeeded= $quantity;
+        $productId = $itemData['product_id'];
+        $quantity = (int) $itemData['quantity'];
+        $remainingNeeded = $quantity;
 
         // Priority 1: deduct from original purchase invoice batches first
         if ($invoice->original_purchase_invoice_id) {
@@ -129,12 +129,12 @@ class SupplierReturnInvoiceService
             foreach ($batches as $batch) {
                 if ($remainingNeeded <= 0) break;
 
-                $deduct= min($remainingNeeded, $batch->quantity_on_hand);
+                $deduct = min($remainingNeeded, $batch->quantity_on_hand);
                 $newQuantity = $batch->quantity_on_hand - $deduct;
 
                 $batch->update([
                     'quantity_on_hand' => $newQuantity,
-                    'status'=> $newQuantity === 0 ? 'depleted' : $batch->status,
+                    'status' => $newQuantity === 0 ? 'depleted' : $batch->status,
                 ]);
 
                 $this->stockService->recordMovement(
@@ -164,7 +164,7 @@ class SupplierReturnInvoiceService
             foreach ($batches as $batch) {
                 if ($remainingNeeded <= 0) break;
 
-                $deduct= min($remainingNeeded, $batch->quantity_on_hand);
+                $deduct = min($remainingNeeded, $batch->quantity_on_hand);
                 $newQuantity = $batch->quantity_on_hand - $deduct;
 
                 $batch->update([
@@ -188,7 +188,7 @@ class SupplierReturnInvoiceService
         }
 
         $unitPrice = (float) $itemData['unit_price'];
-        $tax= (float) ($itemData['tax'] ?? 0);
+        $tax = (float) ($itemData['tax'] ?? 0);
         $discount = (float) ($itemData['discount'] ?? 0);
         $lineTotal = round(($unitPrice * $quantity) - $discount + $tax, 2);
 
@@ -199,7 +199,7 @@ class SupplierReturnInvoiceService
             'unit_price' => $unitPrice,
             'tax' => $tax,
             'discount' => $discount,
-            'line_total'=> $lineTotal,
+            'line_total' => $lineTotal,
         ]);
     }
     private function reverseStock(SupplierReturnInvoice $invoice, User $user): void
@@ -219,8 +219,8 @@ class SupplierReturnInvoiceService
             $restoreQty = abs($movement->quantity_change);
 
             $batch->update([
-                'quantity_on_hand'=> $batch->quantity_on_hand + $restoreQty,
-                'status'=> 'active',
+                'quantity_on_hand' => $batch->quantity_on_hand + $restoreQty,
+                'status' => 'active',
             ]);
 
             $this->stockService->recordMovement(
@@ -249,7 +249,7 @@ class SupplierReturnInvoiceService
             $product = Product::find($itemData['product_id']);
             throw new \InvalidArgumentException(
                 "Insufficient stock for '{$product->brand_name}'. " .
-                "Requested: {$itemData['quantity']}, Available: {$available}."
+                    "Requested: {$itemData['quantity']}, Available: {$available}."
             );
         }
     }
