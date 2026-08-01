@@ -216,9 +216,12 @@ class StockService
      * Find every active batch whose expiry date has passed and expire each one.
      * Notification is handled by the caller (command), not this service.
      *
+     * $createdBy is nullable because this is typically triggered by the
+     * scheduled command (a system process), not a human user.
+     *
      * @return array<int, StockBatch> The batches that were expired.
      */
-    public function expireOverdueBatches(): array
+    public function expireOverdueBatches(?int $createdBy = null): array
     {
         $expiredBatches = StockBatch::where('status', 'active')
             ->whereNotNull('expiry_date')
@@ -228,7 +231,7 @@ class StockService
         $results = [];
 
         foreach ($expiredBatches as $batch) {
-            $results[] = $this->expireBatch($batch, createdBy: null);
+            $results[] = $this->expireBatch($batch, createdBy: $createdBy);
         }
 
         return $results;

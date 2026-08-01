@@ -10,20 +10,26 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 #[Signature('pharmacy:check-expiring-stock')]
-#[Description('Check for product batches past their expiry date, expire them, and notify pharmacy owners')]
+#[Description('Check for product batches past their expiry date, expire them, and notify pharmacy users')]
 class CheckExpiringProducts extends Command
 {
     public function handle(StockService $stockService, NotificationService $notifier): void
     {
         try {
-            $expiredBatches = $stockService->expireOverdueBatches();
+            $expiredBatches = $stockService->expireOverdueBatches(createdBy: null);
 
             collect($expiredBatches)
                 ->groupBy('pharmacy_id')
                 ->each(function ($batches, $pharmacyId) use ($notifier) {
                     $pharmacy = $batches->first()->pharmacy;
 
-                    if (!$pharmacy || !$pharmacy->owner) {
+                    if (!$pharmacy) {
+                        return;
+                    }
+
+                    $recipients = $pharmacy->users;
+
+                    if ($recipients->isEmpty()) {
                         return;
                     }
 
@@ -44,17 +50,16 @@ class CheckExpiringProducts extends Command
                         ? "{$productLines} has expired and was written off automatically."
                         : "The following batches expired and were written off automatically: {$productLines}.";
 
-                    $notifier->sendAndSave(
-                        $pharmacy->owner,
-                        $title,
-                        $body,
-                        [
-                            'type'        => 'batch_expired',
-                            'pharmacy_id' => (int) $pharmacyId,
-                            'batch_ids'   => $batches->pluck('id')->all(),
-                            'product_ids' => $batches->pluck('product_id')->unique()->values()->all(),
-                        ]
-                    );
+                    $data = [
+                        'type'        => 'batch_expired',
+                        'pharmacy_id' => (int) $pharmacyId,
+                        'batch_ids'   => $batches->pluck('id')->all(),
+                        'product_ids' => $batches->pluck('product_id')->unique()->values()->all(),
+                    ];
+
+                    foreach ($recipients as $recipient) {
+                        $notifier->sendAndSave($recipient, $title, $body, $data);
+                    }
                 });
 
             $this->info(count($expiredBatches) . ' batch(es) expired and notified.');

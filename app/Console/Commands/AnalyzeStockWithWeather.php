@@ -11,33 +11,31 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 #[Signature('app:analyze-stock-with-weather')]
-#[Description('Analyze stock levels in relation to weather patterns and send advices notifications to pharmacy owners')]
+#[Description('Analyze stock levels in relation to weather patterns and send advice notifications to pharmacy users')]
 class AnalyzeStockWithWeather extends Command
 {
-    /**
-     * Execute the console command.
-     */
     public function handle(InventoryPredictionService $predictionService, NotificationService $notifier)
     {
-        $pharmacies = Pharmacy::with('owner')->get();
+        $pharmacies = Pharmacy::with('users')->get();
 
         foreach ($pharmacies as $pharmacy) {
-            if (!$pharmacy->owner) continue;
+            if ($pharmacy->users->isEmpty()) continue;
 
             try {
                 $report = $predictionService->predictForPharmacy($pharmacy->id);
 
-                // تجميع النص من الـ Array للإشعار
                 $adviceText = collect($report['ai_recommendations'])
                     ->map(fn($item) => "{$item['product_name']}: {$item['advice']}")
                     ->implode("\n");
 
-                $notifier->sendAndSave(
-                    $pharmacy->owner,
-                    'AI Weather & Stock Report ☁️📦',
-                    "Daily Recommendations:\n" . $adviceText,
-                    ['pharmacy_id' => $pharmacy->id]
-                );
+                foreach ($pharmacy->users as $recipient) {
+                    $notifier->sendAndSave(
+                        $recipient,
+                        'AI Weather & Stock Report ☁️📦',
+                        "Daily Recommendations:\n" . $adviceText,
+                        ['pharmacy_id' => $pharmacy->id]
+                    );
+                }
             } catch (\Exception $e) {
                 Log::error("AI Report failed for Pharmacy {$pharmacy->id}: " . $e->getMessage());
             }
