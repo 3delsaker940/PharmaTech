@@ -32,7 +32,7 @@ return new class extends Migration
             $table->integer('quantity_change');
             $table->string('reference_type')->nullable();
             $table->unsignedBigInteger('reference_id')->nullable();
-            $table->foreignId('created_by')->constrained('users');
+            $table->foreignId('created_by')->nullable()->constrained('users');
             $table->text('notes')->nullable();
             $table->timestamp('created_at')->useCurrent();
 

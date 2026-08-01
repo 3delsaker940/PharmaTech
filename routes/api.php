@@ -17,6 +17,7 @@ use App\Http\Controllers\StockBatchController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierDebtController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SupplierReturnInvoiceController;
 use App\Http\Controllers\WeatherDrivenInventoryController;
 use App\Http\Controllers\DrugInteractionController;
@@ -195,4 +196,8 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::get('reports/stock-health', [ReportController::class, 'stockHealth']);
         Route::get('/inventory/predict-needs', [WeatherDrivenInventoryController::class, 'predictInventoryNeeds']);
         Route::post('/inventory/check-drug-interactions', [DrugInteractionController::class, 'checkInteractions']);
+        Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
+
+        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     });
