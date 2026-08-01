@@ -45,7 +45,7 @@ class SalesInvoiceService
                 'created_by' => $user->id,
                 'invoice_number' => $this->generateInvoiceNumber($pharmacy->id),
                 'invoice_date' => $data['invoice_date'],
-                'subtotal'=> $totals['subtotal'],
+                'subtotal' => $totals['subtotal'],
                 'tax_total' => $totals['tax_total'],
                 'discount_total' => $totals['discount_total'],
                 'grand_total' => $grandTotal,
@@ -71,7 +71,7 @@ class SalesInvoiceService
                     'pharmacy_id' => $pharmacy->id,
                     'customer_id' => $data['customer_id'],
                     'sales_invoice_id' => $invoice->id,
-                    'total_amount'=> $grandTotal,
+                    'total_amount' => $grandTotal,
                     'paid_amount' => $amountPaid,
                     'remaining_amount' => $amountDue,
                     'due_date' => $data['due_date'] ?? null,
@@ -113,27 +113,27 @@ class SalesInvoiceService
         return SalesInvoice::where('pharmacy_id', $pharmacy->id)
             ->when(
                 filled($filters['status'] ?? null),
-                fn ($q) => $q->where('status', $filters['status'])
+                fn($q) => $q->where('status', $filters['status'])
             )
             ->when(
                 filled($filters['payment_status'] ?? null),
-                fn ($q) => $q->where('payment_status', $filters['payment_status'])
+                fn($q) => $q->where('payment_status', $filters['payment_status'])
             )
             ->when(
                 filled($filters['payment_method'] ?? null),
-                fn ($q) => $q->where('payment_method', $filters['payment_method'])
+                fn($q) => $q->where('payment_method', $filters['payment_method'])
             )
             ->when(
                 filled($filters['customer_id'] ?? null),
-                fn ($q) => $q->where('customer_id', $filters['customer_id'])
+                fn($q) => $q->where('customer_id', $filters['customer_id'])
             )
             ->when(
                 filled($filters['date_from'] ?? null),
-                fn ($q) => $q->whereDate('invoice_date', '>=', $filters['date_from'])
+                fn($q) => $q->whereDate('invoice_date', '>=', $filters['date_from'])
             )
             ->when(
                 filled($filters['date_to'] ?? null),
-                fn ($q) => $q->whereDate('invoice_date', '<=', $filters['date_to'])
+                fn($q) => $q->whereDate('invoice_date', '<=', $filters['date_to'])
             )
             ->with(['customer', 'createdBy'])
             ->orderByDesc('created_at')
@@ -152,7 +152,7 @@ class SalesInvoiceService
             ->where('product_id', $productId)
             ->where('status', 'active')
             ->where('quantity_on_hand', '>', 0)
-            ->orderBy('received_at')
+            ->orderBy('expiry_date')
             ->lockForUpdate()
             ->get();
 
@@ -169,13 +169,13 @@ class SalesInvoiceService
                 'status'  => $newQuantity === 0 ? 'depleted' : $batch->status,
             ]);
             $this->stockService->recordMovement(
-                pharmacyId:$pharmacy->id,
+                pharmacyId: $pharmacy->id,
                 productId: $productId,
                 batchId: $batch->id,
                 movementType: 'sale_out',
                 quantityChange: -$deduct,
                 createdBy: $user->id,
-                referenceType:'sales_invoice',
+                referenceType: 'sales_invoice',
                 referenceId: $invoice->id,
                 notes: "Sale — invoice {$invoice->invoice_number}",
             );
@@ -238,7 +238,7 @@ class SalesInvoiceService
             $product = Product::find($itemData['product_id']);
             throw new \InvalidArgumentException(
                 "Insufficient stock for '{$product->brand_name}'. " .
-                "Requested: {$itemData['quantity']}, Available: {$available}."
+                    "Requested: {$itemData['quantity']}, Available: {$available}."
             );
         }
     }
@@ -253,8 +253,8 @@ class SalesInvoiceService
             $tax = (float) ($item['tax'] ?? 0);
             $discount = (float) ($item['discount'] ?? 0);
 
-            $subtotal+= $gross;
-            $taxTotal+= $tax;
+            $subtotal += $gross;
+            $taxTotal += $tax;
             $discountTotal += $discount;
         }
 

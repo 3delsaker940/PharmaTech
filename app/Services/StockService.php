@@ -46,7 +46,7 @@ class StockService
         ?int $batchId,
         string $movementType,
         int $quantityChange,
-        int $createdBy,
+        ?int $createdBy,
         ?string $referenceType = null,
         ?int $referenceId = null,
         ?string $notes = null
@@ -100,15 +100,15 @@ class StockService
 
             if ($quantityToReverse > 0) {
                 $this->recordMovement(
-                    pharmacyId:     $invoice->pharmacy_id,
-                    productId:      $batch->product_id,
-                    batchId:        $batch->id,
-                    movementType:   'supplier_return_out',
+                    pharmacyId: $invoice->pharmacy_id,
+                    productId: $batch->product_id,
+                    batchId: $batch->id,
+                    movementType: 'supplier_return_out',
                     quantityChange: -$quantityToReverse,
-                    createdBy:      $user->id,
-                    referenceType:  'purchase_invoice',
-                    referenceId:    $invoice->id,
-                    notes:          "Stock reversed — invoice {$invoice->invoice_number} cancelled",
+                    createdBy: $user->id,
+                    referenceType: 'purchase_invoice',
+                    referenceId: $invoice->id,
+                    notes: "Stock reversed — invoice {$invoice->invoice_number} cancelled",
                 );
             }
         }
@@ -132,13 +132,13 @@ class StockService
         ]);
 
         $movement = $this->recordMovement(
-            pharmacyId:     $pharmacy->id,
-            productId:      $data['product_id'],
-            batchId:        $batch->id,
-            movementType:   'adjustment_in',
+            pharmacyId: $pharmacy->id,
+            productId: $data['product_id'],
+            batchId: $batch->id,
+            movementType: 'adjustment_in',
             quantityChange: $data['quantity'],
-            createdBy:      $user->id,
-            notes:          $data['notes'] ?? 'Manual stock addition',
+            createdBy: $user->id,
+            notes: $data['notes'] ?? 'Manual stock addition',
         );
 
         return ['batch' => $batch, 'movement' => $movement];
@@ -154,7 +154,7 @@ class StockService
         if ($batch->quantity_on_hand < $data['quantity']) {
             throw new \InvalidArgumentException(
                 "Cannot remove {$data['quantity']} units. " .
-                "Only {$batch->quantity_on_hand} available in batch {$batch->batch_number}."
+                    "Only {$batch->quantity_on_hand} available in batch {$batch->batch_number}."
             );
         }
 
@@ -166,16 +166,72 @@ class StockService
         ]);
 
         $movement = $this->recordMovement(
-            pharmacyId:     $pharmacy->id,
-            productId:      $batch->product_id,
-            batchId:        $batch->id,
-            movementType:   'adjustment_out',
+            pharmacyId: $pharmacy->id,
+            productId: $batch->product_id,
+            batchId: $batch->id,
+            movementType: 'adjustment_out',
             quantityChange: -$data['quantity'],
-            createdBy:      $user->id,
-            notes:          $data['notes'] ?? 'Manual stock removal',
+            createdBy: $user->id,
+            notes: $data['notes'] ?? 'Manual stock removal',
         );
 
         return ['batch' => $batch->fresh(), 'movement' => $movement];
+    }
+
+    public function expireBatch(StockBatch $batch, ?int $createdBy = null): StockBatch
+    {
+        if ($batch->status === 'expired') {
+            throw new \InvalidArgumentException('This batch is already marked as expired.');
+        }
+
+        if ($batch->status === 'inactive') {
+            throw new \InvalidArgumentException('This batch has been reversed and cannot be expired.');
+        }
+
+        return DB::transaction(function () use ($batch, $createdBy) {
+            $quantityWrittenOff = $batch->quantity_on_hand;
+
+            $batch->update([
+                'status'           => 'expired',
+                'quantity_on_hand' => 0,
+            ]);
+
+            if ($quantityWrittenOff > 0) {
+                $this->recordMovement(
+                    pharmacyId: $batch->pharmacy_id,
+                    productId: $batch->product_id,
+                    batchId: $batch->id,
+                    movementType: 'expiry_out',
+                    quantityChange: -$quantityWrittenOff,
+                    createdBy: $createdBy,
+                    notes: "Batch {$batch->batch_number} marked as expired",
+                );
+            }
+
+            return $batch->fresh('product');
+        });
+    }
+
+    /**
+     * Find every active batch whose expiry date has passed and expire each one.
+     * Notification is handled by the caller (command), not this service.
+     *
+     * @return array<int, StockBatch> The batches that were expired.
+     */
+    public function expireOverdueBatches(): array
+    {
+        $expiredBatches = StockBatch::where('status', 'active')
+            ->whereNotNull('expiry_date')
+            ->whereDate('expiry_date', '<=', now())
+            ->get();
+
+        $results = [];
+
+        foreach ($expiredBatches as $batch) {
+            $results[] = $this->expireBatch($batch, createdBy: null);
+        }
+
+        return $results;
     }
 
     private function generateBatchNumber(int $pharmacyId): string
