@@ -32,17 +32,22 @@ class CustomerReturnInvoiceSeeder extends Seeder
             return;
         }
 
-        // Get the original sales invoice linked to Hasan (partial payment one)
-        $originalInvoice = SalesInvoice::where('pharmacy_id', $pharmacy->id)
-            ->where('customer_id', $customer->id)
-            ->first();
-
         $panadol = Product::where('pharmacy_id', $pharmacy->id)
             ->where('brand_name', 'Panadol Extra')
             ->first();
 
         if (! $panadol) {
             $this->command->warn('Required product not found. Run ProductSeeder first.');
+            return;
+        }
+
+        $originalInvoice = SalesInvoice::where('pharmacy_id', $pharmacy->id)
+            ->where('customer_id', $customer->id)
+            ->whereHas('items', fn ($q) => $q->where('product_id', $panadol->id))
+            ->first();
+
+        if (! $originalInvoice) {
+            $this->command->warn('No sales invoice with Panadol Extra found for Hasan. Run SalesInvoiceSeeder first.');
             return;
         }
 

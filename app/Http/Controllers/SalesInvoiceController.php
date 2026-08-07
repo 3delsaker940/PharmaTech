@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\StoreSalesInvoiceRequest;
 use App\Http\Requests\UpdateSalesInvoiceRequest;
+use App\Http\Requests\IndexSalesInvoiceRequest;
 use App\Http\Resources\SalesInvoiceResource;
 use App\Models\SalesInvoice;
 use App\Services\SalesInvoiceService;
@@ -18,7 +19,7 @@ class SalesInvoiceController extends Controller
 
     public function __construct(private readonly SalesInvoiceService $salesInvoiceService) {}
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexSalesInvoiceRequest $request): AnonymousResourceCollection
     {
         $invoices = $this->salesInvoiceService->list(
             $request->attributes->get('pharmacy'),
@@ -27,6 +28,7 @@ class SalesInvoiceController extends Controller
                 'payment_status',
                 'payment_method',
                 'customer_id',
+                'walk_in',
                 'date_from',
                 'date_to',
                 'per_page',
