@@ -128,6 +128,10 @@ class SalesInvoiceService
                 fn($q) => $q->where('customer_id', $filters['customer_id'])
             )
             ->when(
+                isset($filters['walk_in']) && filter_var($filters['walk_in'], FILTER_VALIDATE_BOOLEAN),
+                fn($q) => $q->whereNull('customer_id')
+            )
+            ->when(
                 filled($filters['date_from'] ?? null),
                 fn($q) => $q->whereDate('invoice_date', '>=', $filters['date_from'])
             )
