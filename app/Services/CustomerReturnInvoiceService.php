@@ -6,11 +6,13 @@ use App\Models\CustomerReturnInvoice;
 use App\Models\CustomerReturnItem;
 use App\Models\Pharmacy;
 use App\Models\Product;
+use App\Models\SalesInvoiceItem;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class CustomerReturnInvoiceService
 {
@@ -21,7 +23,11 @@ class CustomerReturnInvoiceService
     public function store(Pharmacy $pharmacy, User $user, array $data): CustomerReturnInvoice
     {
         return DB::transaction(function () use ($pharmacy, $user, $data) {
-            $totals= $this->calculateTotals($data['items']);
+            if (! empty($data['original_sales_invoice_id'])) {
+                $this->validateReturnQuantities($pharmacy, (int) $data['original_sales_invoice_id'], $data['items']);
+            }
+
+            $totals = $this->calculateTotals($data['items']);
             $refundTotal = $totals['refund_total'];
 
             $invoice = CustomerReturnInvoice::create([
@@ -78,28 +84,75 @@ class CustomerReturnInvoiceService
         return CustomerReturnInvoice::where('pharmacy_id', $pharmacy->id)
             ->when(
                 filled($filters['status'] ?? null),
-                fn ($q) => $q->where('status', $filters['status'])
+                fn($q) => $q->where('status', $filters['status'])
             )
             ->when(
                 filled($filters['customer_id'] ?? null),
-                fn ($q) => $q->where('customer_id', $filters['customer_id'])
+                fn($q) => $q->where('customer_id', $filters['customer_id'])
             )
             ->when(
                 filled($filters['original_sales_invoice_id'] ?? null),
-                fn ($q) => $q->where('original_sales_invoice_id', $filters['original_sales_invoice_id'])
+                fn($q) => $q->where('original_sales_invoice_id', $filters['original_sales_invoice_id'])
             )
             ->when(
                 filled($filters['date_from'] ?? null),
-                fn ($q) => $q->whereDate('invoice_date', '>=', $filters['date_from'])
+                fn($q) => $q->whereDate('invoice_date', '>=', $filters['date_from'])
             )
             ->when(
                 filled($filters['date_to'] ?? null),
-                fn ($q) => $q->whereDate('invoice_date', '<=', $filters['date_to'])
+                fn($q) => $q->whereDate('invoice_date', '<=', $filters['date_to'])
             )
             ->with(['customer', 'createdBy'])
             ->orderByDesc('created_at')
             ->paginate((int) ($filters['per_page'] ?? 15));
     }
+    private function validateReturnQuantities(Pharmacy $pharmacy, int $originalSalesInvoiceId, array $items): void
+    {
+        $requestedByProduct = [];
+        foreach ($items as $itemData) {
+            $productId = (int) $itemData['product_id'];
+            $requestedByProduct[$productId] = ($requestedByProduct[$productId] ?? 0) + (int) $itemData['quantity'];
+        }
+
+        $productIds = array_keys($requestedByProduct);
+
+        $soldByProduct = SalesInvoiceItem::where('sales_invoice_id', $originalSalesInvoiceId)
+            ->whereIn('product_id', $productIds)
+            ->selectRaw('product_id, SUM(quantity) as total_sold')
+            ->groupBy('product_id')
+            ->pluck('total_sold', 'product_id');
+
+        $alreadyReturnedByProduct = CustomerReturnItem::query()
+            ->join('customer_return_invoices', 'customer_return_invoices.id', '=', 'customer_return_items.customer_return_invoice_id')
+            ->where('customer_return_invoices.original_sales_invoice_id', $originalSalesInvoiceId)
+            ->where('customer_return_invoices.status', '!=', 'cancelled')
+            ->whereIn('customer_return_items.product_id', $productIds)
+            ->lockForUpdate()
+            ->selectRaw('customer_return_items.product_id, SUM(customer_return_items.quantity) as total_returned')
+            ->groupBy('customer_return_items.product_id')
+            ->pluck('total_returned', 'product_id');
+
+        foreach ($requestedByProduct as $productId => $requestedQty) {
+            $sold = (int) ($soldByProduct[$productId] ?? 0);
+            $alreadyReturned = (int) ($alreadyReturnedByProduct[$productId] ?? 0);
+            $remaining = $sold - $alreadyReturned;
+
+            if ($sold === 0) {
+                $productName = Product::find($productId)?->name ?? "#{$productId}";
+                throw ValidationException::withMessages([
+                    'items' => "Product \"{$productName}\" was not sold on the selected sales invoice.",
+                ]);
+            }
+
+            if ($requestedQty > $remaining) {
+                $productName = Product::find($productId)?->name ?? "#{$productId}";
+                throw ValidationException::withMessages([
+                    'items' => "Cannot return {$requestedQty} unit(s) of \"{$productName}\": only {$remaining} unit(s) remain returnable for this sales invoice (sold: {$sold}, already returned: {$alreadyReturned}).",
+                ]);
+            }
+        }
+    }
+
     private function processItem(
         CustomerReturnInvoice $invoice,
         Pharmacy $pharmacy,
@@ -138,7 +191,7 @@ class CustomerReturnInvoiceService
             $batch = StockBatch::find($batchId);
             $batch->update([
                 'quantity_on_hand' => $batch->quantity_on_hand + $quantity,
-                'status'=> 'active',
+                'status' => 'active',
             ]);
         }
 
@@ -224,7 +277,7 @@ class CustomerReturnInvoiceService
         return [
             'subtotal' => round($subtotal, 2),
             'tax_total' => round($taxTotal, 2),
-            'discount_total'=> round($discountTotal, 2),
+            'discount_total' => round($discountTotal, 2),
             'refund_total' => round($subtotal - $discountTotal + $taxTotal, 2),
         ];
     }
