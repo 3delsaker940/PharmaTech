@@ -6,12 +6,13 @@ use App\Models\Pharmacy;
 use App\Models\Product;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
-use App\Models\Supplier;
 use App\Models\SupplierReturnInvoice;
 use App\Models\SupplierReturnItem;
+use App\Models\PurchaseInvoiceItem;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class SupplierReturnInvoiceService
 {
@@ -23,6 +24,10 @@ class SupplierReturnInvoiceService
     public function store(Pharmacy $pharmacy, User $user, array $data): SupplierReturnInvoice
     {
         return DB::transaction(function () use ($pharmacy, $user, $data) {
+
+            if (! empty($data['original_purchase_invoice_id'])) {
+                $this->validateReturnQuantities($pharmacy, (int) $data['original_purchase_invoice_id'], $data['items']);
+            }
 
             foreach ($data['items'] as $itemData) {
                 $this->assertSufficientStock($pharmacy, $itemData);
@@ -105,6 +110,54 @@ class SupplierReturnInvoiceService
             ->orderByDesc('created_at')
             ->paginate((int) ($filters['per_page'] ?? 15));
     }
+
+    private function validateReturnQuantities(Pharmacy $pharmacy, int $originalPurchaseInvoiceId, array $items): void
+    {
+        $requestedByProduct = [];
+        foreach ($items as $itemData) {
+            $productId = (int) $itemData['product_id'];
+            $requestedByProduct[$productId] = ($requestedByProduct[$productId] ?? 0) + (int) $itemData['quantity'];
+        }
+
+        $productIds = array_keys($requestedByProduct);
+
+        $purchasedByProduct = PurchaseInvoiceItem::where('purchase_invoice_id', $originalPurchaseInvoiceId)
+            ->whereIn('product_id', $productIds)
+            ->selectRaw('product_id, SUM(quantity) as total_purchased')
+            ->groupBy('product_id')
+            ->pluck('total_purchased', 'product_id');
+
+        $alreadyReturnedByProduct = SupplierReturnItem::query()
+            ->join('supplier_return_invoices', 'supplier_return_invoices.id', '=', 'supplier_return_items.supplier_return_invoice_id')
+            ->where('supplier_return_invoices.original_purchase_invoice_id', $originalPurchaseInvoiceId)
+            ->where('supplier_return_invoices.status', '!=', 'cancelled')
+            ->whereIn('supplier_return_items.product_id', $productIds)
+            ->lockForUpdate()
+            ->selectRaw('supplier_return_items.product_id, SUM(supplier_return_items.quantity) as total_returned')
+            ->groupBy('supplier_return_items.product_id')
+            ->pluck('total_returned', 'product_id');
+
+        foreach ($requestedByProduct as $productId => $requestedQty) {
+            $purchased = (int) ($purchasedByProduct[$productId] ?? 0);
+            $alreadyReturned = (int) ($alreadyReturnedByProduct[$productId] ?? 0);
+            $remaining = $purchased - $alreadyReturned;
+
+            if ($purchased === 0) {
+                $productName = Product::find($productId)?->brand_name ?? "#{$productId}";
+                throw ValidationException::withMessages([
+                    'items' => "Product \"{$productName}\" was not purchased on the selected purchase invoice.",
+                ]);
+            }
+
+            if ($requestedQty > $remaining) {
+                $productName = Product::find($productId)?->brand_name ?? "#{$productId}";
+                throw ValidationException::withMessages([
+                    'items' => "Cannot return {$requestedQty} unit(s) of \"{$productName}\": only {$remaining} unit(s) remain returnable for this purchase invoice (purchased: {$purchased}, already returned: {$alreadyReturned}).",
+                ]);
+            }
+        }
+    }
+
     private function processItem(
         SupplierReturnInvoice $invoice,
         Pharmacy $pharmacy,
@@ -202,6 +255,7 @@ class SupplierReturnInvoiceService
             'line_total' => $lineTotal,
         ]);
     }
+
     private function reverseStock(SupplierReturnInvoice $invoice, User $user): void
     {
         $movements = StockMovement::where('reference_type', 'supplier_return_invoice')
