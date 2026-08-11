@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 class StockService
 {
     public function __construct(
-        private readonly NotificationService $notificationService
+        private readonly NotificationService $notificationService,
     ) {}
 
     public function createBatchFromPurchaseItem(
@@ -145,10 +145,6 @@ class StockService
             notes: $data['notes'] ?? 'Manual stock addition',
         );
 
-        $product = Product::findOrFail($data['product_id']);
-
-        $this->checkLowStock($product);
-
         return ['batch' => $batch, 'movement' => $movement];
     }
 
@@ -183,10 +179,7 @@ class StockService
             notes: $data['notes'] ?? 'Manual stock removal',
         );
 
-        
-        $product = Product::findOrFail($batch->product_id);
-
-        $this->checkLowStock($product);
+        $this->checkLowStock(Product::findOrFail($batch->product_id));
 
         return ['batch' => $batch->fresh(), 'movement' => $movement];
     }
@@ -250,9 +243,42 @@ class StockService
         return $results;
     }
 
-    
+    /**
+     * Check whether a product's total active stock has fallen to or below
+     * its minimum threshold, and notify the pharmacy if so.
+     *
+     * Called after any operation that reduces stock: manual removal,
+     * a sale, or a supplier return.
+     */
+    public function checkLowStock(Product $product): void
+    {
+        $product->loadMissing('pharmacy');
 
+        $currentQuantity = (int) $product->stockBatches()
+            ->where('status', 'active')
+            ->sum('quantity_on_hand');
 
+        if ($currentQuantity > $product->min_stock) {
+            return;
+        }
+
+        $title = $currentQuantity === 0 ? 'Product Out of Stock' : 'Low Stock Alert';
+        $body  = $currentQuantity === 0
+            ? "{$product->brand_name} is out of stock."
+            : "{$product->brand_name} stock is low. Current quantity: {$currentQuantity}, minimum: {$product->min_stock}.";
+
+        $this->notificationService->sendToPharmacy(
+            $product->pharmacy,
+            $title,
+            $body,
+            [
+                'type'       => $currentQuantity === 0 ? 'out_of_stock' : 'low_stock',
+                'product_id' => $product->id,
+                'quantity'   => $currentQuantity,
+                'min_stock'  => $product->min_stock,
+            ]
+        );
+    }
 
     private function generateBatchNumber(int $pharmacyId): string
     {
@@ -274,28 +300,4 @@ class StockService
 
         return $prefix . str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
-    private function checkLowStock(Product $product): void
-{
-    $product->loadMissing('pharmacy');
-
-    $currentQuantity = $product->stockBatches()
-        ->where('status', 'active')
-        ->sum('quantity_on_hand');
-
-    if ($currentQuantity > $product->min_stock) {
-        return;
-    }
-
-    $this->notificationService->sendToPharmacy(
-        $product->pharmacy,
-        'Low Stock Alert',
-        "{$product->brand_name} stock is low. Current quantity: {$currentQuantity}, minimum: {$product->min_stock}.",
-        [
-            'type' => 'low_stock',
-            'product_id' => $product->id,
-            'quantity' => $currentQuantity,
-            'min_stock' => $product->min_stock,
-        ]
-    );
-}
 }
