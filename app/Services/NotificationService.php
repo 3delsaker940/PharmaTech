@@ -1,37 +1,28 @@
 <?php
 
-namespace App\Services ;
+namespace App\Services;
+
 use App\Models\AppNotification;
-use App\Models\Pharmacy;     
-use App\Models\Product;
+use App\Models\Pharmacy;
 use App\Models\User;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Messaging\CloudMessage;
 
 class NotificationService
 {
-    private ?Messaging $messaging = null;
+    public function __construct(protected ?Messaging $messaging = null) {}
 
-    public function __construct(?Messaging $messaging = null)
+    public function sendAndSave(User $user, string $title, string $body, array $data = []): bool
     {
-        $this->messaging = $messaging;
-    }
-
-    public function sendAndSave(
-        User $user,
-        string $title,
-        string $body,
-        array $data = []
-    ): bool {
-        // Save notification in database
+        // Save to the database first — this must succeed regardless of
+        // whether Firebase is configured or reachable.
         AppNotification::create([
             'user_id' => $user->id,
-            'title' => $title,
-            'body' => $body,
-            'data' => $data,
+            'title'   => $title,
+            'body'    => $body,
+            'data'    => $data,
         ]);
 
-        // No FCM token or Firebase service
         if (!$user->fcm_token || !$this->messaging) {
             return true;
         }
@@ -39,53 +30,33 @@ class NotificationService
         try {
             $message = CloudMessage::fromArray([
                 'token' => $user->fcm_token,
-
                 'notification' => [
                     'title' => $title,
-                    'body' => $body,
+                    'body'  => $body,
                 ],
-
-                'data' => $this->normalizeData($data),
+                'data' => $data,
             ]);
 
             $this->messaging->send($message);
-
             return true;
-        } catch (\Throwable $e) {
-            logger()->error('FCM notification error', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            // Database notification was already saved.
+        } catch (\Exception $e) {
+            logger()->error('FCM Error: ' . $e->getMessage());
+            // The database notification was already saved successfully.
             return true;
         }
     }
 
-    public function sendToPharmacy(
-        Pharmacy $pharmacy,
-        string $title,
-        string $body,
-        array $data = []
-    ): void {
-        $users = $pharmacy->users()
-            ->where('status', 'active')
-            ->get();
-
-        foreach ($users as $user) {
-            $this->sendAndSave(
-                $user,
-                $title,
-                $body,
-                $data
-            );
-        }
-    }
-
-    private function normalizeData(array $data): array
+    /**
+     * Send the same notification to every user belonging to a pharmacy.
+     * This is the standard way to notify a pharmacy until a proper
+     * roles/owner system exists — every user is currently equivalent.
+     */
+    public function sendToPharmacy(Pharmacy $pharmacy, string $title, string $body, array $data = []): void
     {
-        return collect($data)
-            ->map(fn($value) => (string) $value)
-            ->toArray();
+        $pharmacy->loadMissing('users');
+
+        foreach ($pharmacy->users as $user) {
+            $this->sendAndSave($user, $title, $body, $data);
+        }
     }
 }
