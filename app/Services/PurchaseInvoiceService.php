@@ -8,6 +8,7 @@ use App\Models\PurchaseInvoiceItem;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use App\Services\NotificationService;
 
 class PurchaseInvoiceService
 {
@@ -15,6 +16,7 @@ class PurchaseInvoiceService
         private readonly StockService $stockService,
         private readonly CashBoxService $cashBoxService,
         private readonly SupplierDebtService $supplierDebtService,
+         private readonly NotificationService $notifier,
     ) {}
 
     public function list(Pharmacy $pharmacy, array $filters): LengthAwarePaginator
@@ -45,109 +47,136 @@ class PurchaseInvoiceService
             ->paginate($filters['per_page'] ?? 15);
     }
 
-    public function store(Pharmacy $pharmacy, User $user, array $data): PurchaseInvoice
-    {
-        return DB::transaction(function () use ($pharmacy, $user, $data) {
-            $items         = $data['items'];
-            $subtotal      = 0;
-            $taxTotal      = 0;
-            $discountTotal = 0;
+    
+public function store(Pharmacy $pharmacy, User $user, array $data): PurchaseInvoice
+{
+    $invoice = DB::transaction(function () use ($pharmacy, $user, $data) {
+        $items         = $data['items'];
+        $subtotal      = 0;
+        $taxTotal      = 0;
+        $discountTotal = 0;
 
-            foreach ($items as $item) {
-                $subtotal      += $item['quantity'] * $item['wholesale_price'];
-                $taxTotal      += $item['tax'] ?? 0;
-                $discountTotal += $item['discount'] ?? 0;
-            }
+        foreach ($items as $item) {
+            $subtotal      += $item['quantity'] * $item['wholesale_price'];
+            $taxTotal      += $item['tax'] ?? 0;
+            $discountTotal += $item['discount'] ?? 0;
+        }
 
-            $grandTotal = round($subtotal + $taxTotal - $discountTotal, 2);
-            $amountPaid = round(min((float) $data['amount_paid'], $grandTotal), 2);
-            $amountDue  = round($grandTotal - $amountPaid, 2);
+        $grandTotal = round($subtotal + $taxTotal - $discountTotal, 2);
+        $amountPaid = round(min((float) $data['amount_paid'], $grandTotal), 2);
+        $amountDue  = round($grandTotal - $amountPaid, 2);
 
-            $paymentStatus = match (true) {
-                $amountDue <= 0  => 'paid',
-                $amountPaid > 0  => 'partial',
-                default          => 'unpaid',
-            };
+        $paymentStatus = match (true) {
+            $amountDue <= 0  => 'paid',
+            $amountPaid > 0  => 'partial',
+            default          => 'unpaid',
+        };
 
-            $invoice = PurchaseInvoice::create([
-                'pharmacy_id'    => $pharmacy->id,
-                'supplier_id'    => $data['supplier_id'],
-                'created_by'     => $user->id,
-                'invoice_number' => $this->generateInvoiceNumber($pharmacy),
-                'invoice_date'   => $data['invoice_date'],
-                'subtotal'       => round($subtotal, 2),
-                'tax_total'      => round($taxTotal, 2),
-                'discount_total' => round($discountTotal, 2),
-                'grand_total'    => $grandTotal,
-                'amount_paid'    => $amountPaid,
-                'amount_due'     => $amountDue,
-                'payment_method' => $data['payment_method'],
-                'payment_status' => $paymentStatus,
-                'status'         => 'completed',
-                'notes'          => $data['notes'] ?? null,
+        $invoice = PurchaseInvoice::create([
+            'pharmacy_id'    => $pharmacy->id,
+            'supplier_id'    => $data['supplier_id'],
+            'created_by'     => $user->id,
+            'invoice_number' => $this->generateInvoiceNumber($pharmacy),
+            'invoice_date'   => $data['invoice_date'],
+            'subtotal'       => round($subtotal, 2),
+            'tax_total'      => round($taxTotal, 2),
+            'discount_total' => round($discountTotal, 2),
+            'grand_total'    => $grandTotal,
+            'amount_paid'    => $amountPaid,
+            'amount_due'     => $amountDue,
+            'payment_method' => $data['payment_method'],
+            'payment_status' => $paymentStatus,
+            'status'         => 'completed',
+            'notes'          => $data['notes'] ?? null,
+        ]);
+
+        foreach ($items as $itemData) {
+            $lineTotal = round(
+                ($itemData['quantity'] * $itemData['wholesale_price'])
+                + ($itemData['tax'] ?? 0)
+                - ($itemData['discount'] ?? 0),
+                2
+            );
+
+            $invoiceItem = PurchaseInvoiceItem::create([
+                'purchase_invoice_id' => $invoice->id,
+                'product_id'          => $itemData['product_id'],
+                'quantity'            => $itemData['quantity'],
+                'wholesale_price'     => $itemData['wholesale_price'],
+                'tax'                 => $itemData['tax'] ?? 0,
+                'discount'            => $itemData['discount'] ?? 0,
+                'line_total'          => $lineTotal,
             ]);
 
-            foreach ($items as $itemData) {
-                $lineTotal = round(
-                    ($itemData['quantity'] * $itemData['wholesale_price'])
-                    + ($itemData['tax'] ?? 0)
-                    - ($itemData['discount'] ?? 0),
-                    2
-                );
+            $batch = $this->stockService->createBatchFromPurchaseItem(
+                $invoiceItem,
+                $invoice,
+                $itemData
+            );
 
-                $invoiceItem = PurchaseInvoiceItem::create([
-                    'purchase_invoice_id' => $invoice->id,
-                    'product_id'          => $itemData['product_id'],
-                    'quantity'            => $itemData['quantity'],
-                    'wholesale_price'     => $itemData['wholesale_price'],
-                    'tax'                 => $itemData['tax'] ?? 0,
-                    'discount'            => $itemData['discount'] ?? 0,
-                    'line_total'          => $lineTotal,
-                ]);
+            $this->stockService->recordMovement(
+                pharmacyId:     $pharmacy->id,
+                productId:      $invoiceItem->product_id,
+                batchId:        $batch->id,
+                movementType:   'purchase_in',
+                quantityChange: $batch->quantity_on_hand,
+                createdBy:      $user->id,
+                referenceType:  'purchase_invoice',
+                referenceId:    $invoice->id,
+            );
+        }
 
-                $batch = $this->stockService->createBatchFromPurchaseItem(
-                    $invoiceItem,
+        if ($data['payment_method'] === 'cash' && $amountPaid > 0) {
+            $cashBox = $this->cashBoxService->getCashBox($pharmacy->id);
+
+            if ($cashBox) {
+                $this->cashBoxService->deductForPurchase(
+                    $cashBox,
+                    $amountPaid,
                     $invoice,
-                    $itemData
-                );
-
-                $this->stockService->recordMovement(
-                    pharmacyId:     $pharmacy->id,
-                    productId:      $invoiceItem->product_id,
-                    batchId:        $batch->id,
-                    movementType:   'purchase_in',
-                    quantityChange: $batch->quantity_on_hand,
-                    createdBy:      $user->id,
-                    referenceType:  'purchase_invoice',
-                    referenceId:    $invoice->id,
+                    $user
                 );
             }
+        }
 
-            if ($data['payment_method'] === 'cash' && $amountPaid > 0) {
-                $cashBox = $this->cashBoxService->getCashBox($pharmacy->id);
+        if ($amountDue > 0) {
+            $this->supplierDebtService->createFromInvoice($invoice);
+        }
 
-                if ($cashBox) {
-                    $this->cashBoxService->deductForPurchase(
-                        $cashBox,
-                        $amountPaid,
-                        $invoice,
-                        $user
-                    );
-                }
-            }
+        return $invoice->load([
+            'supplier',
+            'createdBy',
+            'items.product',
+            'supplierDebt',
+        ]);
+    });
 
-            if ($amountDue > 0) {
-                $this->supplierDebtService->createFromInvoice($invoice);
-            }
+    /*
+     * Send notification only after the transaction
+     * has successfully completed.
+     */
+    $pharmacy->load('users');
 
-            return $invoice->load([
-                'supplier',
-                'createdBy',
-                'items.product',
-                'supplierDebt',
-            ]);
-        });
+    foreach ($pharmacy->users as $recipient) {
+        $this->notifier->sendAndSave(
+            $recipient,
+            'New Purchase Invoice',
+            "A new purchase invoice {$invoice->invoice_number} has been created from supplier {$invoice->supplier->name}.",
+            [
+                'type'               => 'purchase_invoice_created',
+                'pharmacy_id'        => $pharmacy->id,
+                'purchase_invoice_id' => $invoice->id,
+                'invoice_number'     => $invoice->invoice_number,
+                'supplier_id'        => $invoice->supplier_id,
+                'created_by'         => $user->id,
+                'grand_total'        => $invoice->grand_total,
+            ]
+        );
     }
+
+    return $invoice;
+}
+
 
     public function update(PurchaseInvoice $invoice, array $data): PurchaseInvoice
     {
@@ -157,35 +186,73 @@ class PurchaseInvoiceService
 
         return $invoice->fresh(['supplier', 'createdBy', 'items.product', 'supplierDebt']);
     }
-    public function cancel(PurchaseInvoice $invoice, User $user): PurchaseInvoice
-    {
-        if ($invoice->status === 'cancelled') {
-            throw new \InvalidArgumentException('This invoice is already cancelled.');
+   public function cancel(PurchaseInvoice $invoice, User $user): PurchaseInvoice
+{
+    if ($invoice->status === 'cancelled') {
+        throw new \InvalidArgumentException(
+            'This invoice is already cancelled.'
+        );
+    }
+
+    $invoice = DB::transaction(function () use ($invoice, $user) {
+
+        $invoice->update([
+            'status' => 'cancelled',
+        ]);
+
+        $this->stockService->reverseBatchesFromCancellation(
+            $invoice,
+            $user
+        );
+
+        if (
+            $invoice->payment_method === 'cash'
+            && $invoice->amount_paid > 0
+        ) {
+            $cashBox = $this->cashBoxService->getCashBox(
+                $invoice->pharmacy_id
+            );
+
+            if ($cashBox) {
+                $this->cashBoxService->refundFromCancellation(
+                    $cashBox,
+                    $invoice,
+                    $user
+                );
+            }
         }
 
-        return DB::transaction(function () use ($invoice, $user) {
-            $invoice->update(['status' => 'cancelled']);
+        $this->supplierDebtService->cancelFromInvoice($invoice);
 
-            $this->stockService->reverseBatchesFromCancellation($invoice, $user);
+        return $invoice->fresh([
+            'supplier',
+            'createdBy',
+            'items.product',
+            'supplierDebt',
+        ]);
+    });
 
-            if ($invoice->payment_method === 'cash' && $invoice->amount_paid > 0) {
-                $cashBox = $this->cashBoxService->getCashBox($invoice->pharmacy_id);
+    // Send notification only after successful transaction
+    $this->notifier->sendToPharmacy(
+        Pharmacy::findOrFail($invoice->pharmacy_id),
+        'Purchase Invoice Cancelled',
+        "Purchase invoice {$invoice->invoice_number} from supplier {$invoice->supplier->name} has been cancelled.",
+        [
+            'type' => 'purchase_invoice_cancelled',
+            'pharmacy_id' => $invoice->pharmacy_id,
+            'purchase_invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'supplier_id' => $invoice->supplier_id,
+            'grand_total' => $invoice->grand_total,
+            'amount_paid' => $invoice->amount_paid,
+            'amount_due' => $invoice->amount_due,
+            'payment_status' => $invoice->payment_status,
+            'cancelled_by' => $user->id,
+        ]
+    );
 
-                if ($cashBox) {
-                    $this->cashBoxService->refundFromCancellation($cashBox, $invoice, $user);
-                }
-            }
-
-            $this->supplierDebtService->cancelFromInvoice($invoice);
-
-            return $invoice->fresh([
-                'supplier',
-                'createdBy',
-                'items.product',
-                'supplierDebt',
-            ]);
-        });
-    }
+    return $invoice;
+}
 
     public function findById(Pharmacy $pharmacy, int $id): PurchaseInvoice
     {

@@ -26,3 +26,6 @@ Thumbs.db
 desktop.ini
 env_docker
 env_local
+
+/storage/app/firebase/*.json
+

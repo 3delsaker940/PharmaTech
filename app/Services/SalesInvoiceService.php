@@ -12,101 +12,222 @@ use App\Models\StockMovement;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use App\Services\NotificationService;
 
 class SalesInvoiceService
 {
     public function __construct(
         private readonly StockService $stockService,
         private readonly CashBoxService $cashBoxService,
+        private readonly NotificationService $notifier,
     ) {}
-    public function store(Pharmacy $pharmacy, User $user, array $data): SalesInvoice
-    {
-        return DB::transaction(function () use ($pharmacy, $user, $data) {
-            $totals = $this->calculateTotals($data['items']);
+   public function store(Pharmacy $pharmacy, User $user, array $data): SalesInvoice
+{
+    $result = DB::transaction(function () use ($pharmacy, $user, $data) {
+        $totals = $this->calculateTotals($data['items']);
 
-            $amountPaid = (float) $data['amount_paid'];
-            $grandTotal = $totals['grand_total'];
-            $amountDue = max(0, round($grandTotal - $amountPaid, 2));
+       $grandTotal = $totals['grand_total'];
 
-            if ($amountDue > 0 && empty($data['customer_id'])) {
-                throw new \InvalidArgumentException(
-                    'A customer must be selected when the invoice is not fully paid.'
+$amountPaid = min(
+    (float) $data['amount_paid'],
+    $grandTotal
+);
+
+$amountDue = max(
+    0,
+    round($grandTotal - $amountPaid, 2)
+);
+
+        if ($amountDue > 0 && empty($data['customer_id'])) {
+            throw new \InvalidArgumentException(
+                'A customer must be selected when the invoice is not fully paid.'
+            );
+        }
+
+        foreach ($data['items'] as $itemData) {
+            $this->assertSufficientStock($pharmacy, $itemData);
+        }
+
+        $paymentStatus = $this->resolvePaymentStatus($amountPaid, $grandTotal);
+
+        $invoice = SalesInvoice::create([
+            'pharmacy_id' => $pharmacy->id,
+            'customer_id' => $data['customer_id'] ?? null,
+            'created_by' => $user->id,
+            'invoice_number' => $this->generateInvoiceNumber($pharmacy->id),
+            'invoice_date' => $data['invoice_date'],
+            'subtotal' => $totals['subtotal'],
+            'tax_total' => $totals['tax_total'],
+            'discount_total' => $totals['discount_total'],
+            'grand_total' => $grandTotal,
+            'amount_paid' => $amountPaid,
+            'amount_due' => $amountDue,
+            'payment_method' => $data['payment_method'],
+            'payment_status' => $paymentStatus,
+            'status' => 'completed',
+            'notes' => $data['notes'] ?? null,
+        ]);
+
+        foreach ($data['items'] as $itemData) {
+            $this->processItem($invoice, $pharmacy, $user, $itemData);
+        }
+
+        if (in_array($data['payment_method'], ['cash', 'credit']) && $amountPaid > 0) {
+            $cashBox = $this->cashBoxService->getCashBox($pharmacy->id);
+
+            if ($cashBox) {
+                $this->cashBoxService->recordForSale(
+                    $cashBox,
+                    $amountPaid,
+                    $invoice,
+                    $user
                 );
             }
+        }
 
-            foreach ($data['items'] as $itemData) {
-                $this->assertSufficientStock($pharmacy, $itemData);
-            }
-            $paymentStatus = $this->resolvePaymentStatus($amountPaid, $grandTotal);
+        $customerDebt = null;
 
-            $invoice = SalesInvoice::create([
+        if ($amountDue > 0) {
+            $customerDebt = CustomerDebt::create([
                 'pharmacy_id' => $pharmacy->id,
-                'customer_id' => $data['customer_id'] ?? null,
-                'created_by' => $user->id,
-                'invoice_number' => $this->generateInvoiceNumber($pharmacy->id),
-                'invoice_date' => $data['invoice_date'],
-                'subtotal' => $totals['subtotal'],
-                'tax_total' => $totals['tax_total'],
-                'discount_total' => $totals['discount_total'],
-                'grand_total' => $grandTotal,
-                'amount_paid' => $amountPaid,
-                'amount_due' => $amountDue,
-                'payment_method' => $data['payment_method'],
-                'payment_status' => $paymentStatus,
-                'status' => 'completed',
-                'notes' => $data['notes'] ?? null,
+                'customer_id' => $data['customer_id'],
+                'sales_invoice_id' => $invoice->id,
+                'total_amount' => $grandTotal,
+                'paid_amount' => $amountPaid,
+                'remaining_amount' => $amountDue,
+                'due_date' => $data['due_date'] ?? null,
+                'status' => $this->resolveDebtStatus($amountPaid, $grandTotal),
             ]);
-            foreach ($data['items'] as $itemData) {
-                $this->processItem($invoice, $pharmacy, $user, $itemData);
-            }
+        }
 
-            if (in_array($data['payment_method'], ['cash', 'credit']) && $amountPaid > 0) {
-                $cashBox = $this->cashBoxService->getCashBox($pharmacy->id);
-                if ($cashBox) {
-                    $this->cashBoxService->recordForSale($cashBox, $amountPaid, $invoice, $user);
-                }
-            }
-            if ($amountDue > 0) {
-                CustomerDebt::create([
-                    'pharmacy_id' => $pharmacy->id,
-                    'customer_id' => $data['customer_id'],
-                    'sales_invoice_id' => $invoice->id,
-                    'total_amount' => $grandTotal,
-                    'paid_amount' => $amountPaid,
-                    'remaining_amount' => $amountDue,
-                    'due_date' => $data['due_date'] ?? null,
-                    'status' => $this->resolveDebtStatus($amountPaid, $grandTotal)
-                ]);
-            }
-            return $invoice->load(['items.product', 'customer', 'customerDebt', 'createdBy']);
-        });
-    }
+        return [
+            'invoice' => $invoice->load([
+                'items.product',
+                'customer',
+                'customerDebt',
+                'createdBy',
+            ]),
+            'customerDebt' => $customerDebt,
+        ];
+    });
+
+   $invoice = $result['invoice'];
+$customerDebt = $result['customerDebt'];
+
+$this->notifier->sendToPharmacy(
+    $pharmacy,
+    'New Sales Invoice',
+    "Sales invoice {$invoice->invoice_number} has been created. Total: {$invoice->grand_total}.",
+    [
+        'type' => 'sale_invoice_created',
+        'pharmacy_id' => $pharmacy->id,
+        'sales_invoice_id' => $invoice->id,
+        'invoice_number' => $invoice->invoice_number,
+        'customer_id' => $invoice->customer_id,
+        'grand_total' => $invoice->grand_total,
+        'amount_paid' => $invoice->amount_paid,
+        'amount_due' => $invoice->amount_due,
+        'payment_status' => $invoice->payment_status,
+    ]
+);
+
+if ($customerDebt) {
+    $this->notifier->sendToPharmacy(
+        $pharmacy,
+        'New Customer Debt',
+        "Customer {$invoice->customer->full_name} has a new debt of {$customerDebt->remaining_amount}.",
+        [
+            'type' => 'customer_debt_created',
+            'pharmacy_id' => $pharmacy->id,
+            'customer_debt_id' => $customerDebt->id,
+            'customer_id' => $customerDebt->customer_id,
+            'sales_invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'amount' => $customerDebt->total_amount,
+            'remaining_amount' => $customerDebt->remaining_amount,
+            'status' => $customerDebt->status,
+        ]
+    );
+}
+
+return $invoice;
+}
     public function update(SalesInvoice $invoice, array $data): SalesInvoice
     {
         $invoice->update(['notes' => $data['notes'] ?? $invoice->notes]);
         return $invoice->fresh(['items.product', 'customer', 'customerDebt', 'createdBy']);
     }
 
-    public function cancel(SalesInvoice $invoice, User $user): SalesInvoice
-    {
-        if ($invoice->status === 'cancelled') {
-            throw new \InvalidArgumentException('This invoice has already been cancelled.');
-        }
-        return DB::transaction(function () use ($invoice, $user) {
-            $invoice->update(['status' => 'cancelled']);
-            $this->reverseStock($invoice, $user);
-            if (in_array($invoice->payment_method, ['cash', 'credit']) && $invoice->amount_paid > 0) {
-                $cashBox = $this->cashBoxService->getCashBox($invoice->pharmacy_id);
-                if ($cashBox) {
-                    $this->cashBoxService->refundFromSaleCancellation($cashBox, $invoice, $user);
-                }
-            }
-            if ($invoice->customerDebt) {
-                $invoice->customerDebt->update(['status' => 'cancelled']);
-            }
-            return $invoice->fresh(['items.product', 'customer', 'customerDebt', 'createdBy']);
-        });
+public function cancel(SalesInvoice $invoice, User $user): SalesInvoice
+{
+    if ($invoice->status === 'cancelled') {
+        throw new \InvalidArgumentException(
+            'This invoice has already been cancelled.'
+        );
     }
+
+    $invoice = DB::transaction(function () use ($invoice, $user) {
+
+        $invoice->update([
+            'status' => 'cancelled',
+        ]);
+
+        $this->reverseStock($invoice, $user);
+
+        if (
+            in_array($invoice->payment_method, ['cash', 'credit'])
+            && $invoice->amount_paid > 0
+        ) {
+            $cashBox = $this->cashBoxService->getCashBox(
+                $invoice->pharmacy_id
+            );
+
+            if ($cashBox) {
+                $this->cashBoxService->refundFromSaleCancellation(
+                    $cashBox,
+                    $invoice,
+                    $user
+                );
+            }
+        }
+
+        if ($invoice->customerDebt) {
+            $invoice->customerDebt->update([
+                'status' => 'cancelled',
+            ]);
+        }
+
+        return $invoice->fresh([
+            'items.product',
+            'customer',
+            'customerDebt',
+            'createdBy',
+        ]);
+    });
+
+    // Notify pharmacy users after successful cancellation
+    $this->notifier->sendToPharmacy(
+        Pharmacy::findOrFail($invoice->pharmacy_id),
+        'Sales Invoice Cancelled',
+        "Sales invoice {$invoice->invoice_number} has been cancelled.",
+        [
+            'type' => 'sale_invoice_cancelled',
+            'pharmacy_id' => $invoice->pharmacy_id,
+            'sales_invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->invoice_number,
+            'customer_id' => $invoice->customer_id,
+            'grand_total' => $invoice->grand_total,
+            'amount_paid' => $invoice->amount_paid,
+            'amount_due' => $invoice->amount_due,
+            'payment_status' => $invoice->payment_status,
+            'cancelled_by' => $user->id,
+        ]
+    );
+
+    return $invoice;
+}
+
+
 
     public function list(Pharmacy $pharmacy, array $filters = []): LengthAwarePaginator
     {
