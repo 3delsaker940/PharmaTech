@@ -18,10 +18,12 @@ class SalesInvoiceService
     public function __construct(
         private readonly StockService $stockService,
         private readonly CashBoxService $cashBoxService,
+        private readonly NotificationService $notifier,
     ) {}
+
     public function store(Pharmacy $pharmacy, User $user, array $data): SalesInvoice
     {
-        return DB::transaction(function () use ($pharmacy, $user, $data) {
+        $result = DB::transaction(function () use ($pharmacy, $user, $data) {
             $totals = $this->calculateTotals($data['items']);
 
             $amountPaid = (float) $data['amount_paid'];
@@ -56,8 +58,12 @@ class SalesInvoiceService
                 'status' => 'completed',
                 'notes' => $data['notes'] ?? null,
             ]);
+
+            $affectedProductIds = [];
+
             foreach ($data['items'] as $itemData) {
                 $this->processItem($invoice, $pharmacy, $user, $itemData);
+                $affectedProductIds[] = $itemData['product_id'];
             }
 
             if (in_array($data['payment_method'], ['cash', 'credit']) && $amountPaid > 0) {
@@ -66,8 +72,11 @@ class SalesInvoiceService
                     $this->cashBoxService->recordForSale($cashBox, $amountPaid, $invoice, $user);
                 }
             }
+
+            $customerDebt = null;
+
             if ($amountDue > 0) {
-                CustomerDebt::create([
+                $customerDebt = CustomerDebt::create([
                     'pharmacy_id' => $pharmacy->id,
                     'customer_id' => $data['customer_id'],
                     'sales_invoice_id' => $invoice->id,
@@ -78,8 +87,62 @@ class SalesInvoiceService
                     'status' => $this->resolveDebtStatus($amountPaid, $grandTotal)
                 ]);
             }
-            return $invoice->load(['items.product', 'customer', 'customerDebt', 'createdBy']);
+
+            return [
+                'invoice' => $invoice->load(['items.product', 'customer', 'customerDebt', 'createdBy']),
+                'customerDebt' => $customerDebt,
+                'affectedProductIds' => array_unique($affectedProductIds),
+            ];
         });
+
+        $invoice = $result['invoice'];
+        $customerDebt = $result['customerDebt'];
+        $affectedProductIds = $result['affectedProductIds'];
+
+        // Low-stock checks run after the transaction has committed, so the
+        // notification reflects the final quantity, not a mid-transaction one.
+        foreach ($affectedProductIds as $productId) {
+            $this->stockService->checkLowStock(Product::findOrFail($productId));
+        }
+
+        // Notifications are sent only after the transaction has committed.
+        $this->notifier->sendToPharmacy(
+            $pharmacy,
+            'New Sales Invoice',
+            "Sales invoice {$invoice->invoice_number} has been created. Total: {$invoice->grand_total}.",
+            [
+                'type' => 'sale_invoice_created',
+                'pharmacy_id' => $pharmacy->id,
+                'sales_invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'customer_id' => $invoice->customer_id,
+                'grand_total' => $invoice->grand_total,
+                'amount_paid' => $invoice->amount_paid,
+                'amount_due' => $invoice->amount_due,
+                'payment_status' => $invoice->payment_status,
+            ]
+        );
+
+        if ($customerDebt) {
+            $this->notifier->sendToPharmacy(
+                $pharmacy,
+                'New Customer Debt',
+                "Customer {$invoice->customer->full_name} has a new debt of {$customerDebt->remaining_amount}.",
+                [
+                    'type' => 'customer_debt_created',
+                    'pharmacy_id' => $pharmacy->id,
+                    'customer_debt_id' => $customerDebt->id,
+                    'customer_id' => $customerDebt->customer_id,
+                    'sales_invoice_id' => $invoice->id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'amount' => $customerDebt->total_amount,
+                    'remaining_amount' => $customerDebt->remaining_amount,
+                    'status' => $customerDebt->status,
+                ]
+            );
+        }
+
+        return $invoice;
     }
     public function update(SalesInvoice $invoice, array $data): SalesInvoice
     {
@@ -92,7 +155,7 @@ class SalesInvoiceService
         if ($invoice->status === 'cancelled') {
             throw new \InvalidArgumentException('This invoice has already been cancelled.');
         }
-        return DB::transaction(function () use ($invoice, $user) {
+        $invoice = DB::transaction(function () use ($invoice, $user) {
             $invoice->update(['status' => 'cancelled']);
             $this->reverseStock($invoice, $user);
             if (in_array($invoice->payment_method, ['cash', 'credit']) && $invoice->amount_paid > 0) {
@@ -106,6 +169,26 @@ class SalesInvoiceService
             }
             return $invoice->fresh(['items.product', 'customer', 'customerDebt', 'createdBy']);
         });
+
+        $this->notifier->sendToPharmacy(
+            Pharmacy::findOrFail($invoice->pharmacy_id),
+            'Sales Invoice Cancelled',
+            "Sales invoice {$invoice->invoice_number} has been cancelled.",
+            [
+                'type' => 'sale_invoice_cancelled',
+                'pharmacy_id' => $invoice->pharmacy_id,
+                'sales_invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'customer_id' => $invoice->customer_id,
+                'grand_total' => $invoice->grand_total,
+                'amount_paid' => $invoice->amount_paid,
+                'amount_due' => $invoice->amount_due,
+                'payment_status' => $invoice->payment_status,
+                'cancelled_by' => $user->id,
+            ]
+        );
+
+        return $invoice;
     }
 
     public function list(Pharmacy $pharmacy, array $filters = []): LengthAwarePaginator

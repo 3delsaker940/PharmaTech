@@ -19,11 +19,12 @@ class SupplierReturnInvoiceService
     public function __construct(
         private readonly StockService   $stockService,
         private readonly CashBoxService $cashBoxService,
+        private readonly NotificationService $notifier,
     ) {}
 
     public function store(Pharmacy $pharmacy, User $user, array $data): SupplierReturnInvoice
     {
-        return DB::transaction(function () use ($pharmacy, $user, $data) {
+        $result = DB::transaction(function () use ($pharmacy, $user, $data) {
 
             if (! empty($data['original_purchase_invoice_id'])) {
                 $this->validateReturnQuantities($pharmacy, (int) $data['original_purchase_invoice_id'], $data['items']);
@@ -52,8 +53,11 @@ class SupplierReturnInvoiceService
                 'notes' => $data['notes'] ?? null,
             ]);
 
+            $affectedProductIds = [];
+
             foreach ($data['items'] as $itemData) {
                 $this->processItem($invoice, $pharmacy, $user, $itemData);
+                $affectedProductIds[] = $itemData['product_id'];
             }
 
             if ($data['refund_method'] === 'cash' && $refundTotal > 0) {
@@ -62,8 +66,35 @@ class SupplierReturnInvoiceService
                     $this->cashBoxService->recordForSupplierReturn($cashBox, $invoice, $user);
                 }
             }
-            return $invoice->load(['items.product', 'supplier', 'originalPurchaseInvoice', 'createdBy']);
+
+            return [
+                'invoice' => $invoice->load(['items.product', 'supplier', 'originalPurchaseInvoice', 'createdBy']),
+                'affectedProductIds' => array_unique($affectedProductIds),
+            ];
         });
+
+        $invoice = $result['invoice'];
+        $affectedProductIds = $result['affectedProductIds'];
+
+        foreach ($affectedProductIds as $productId) {
+            $this->stockService->checkLowStock(Product::findOrFail($productId));
+        }
+
+        $this->notifier->sendToPharmacy(
+            $pharmacy,
+            'New Supplier Return',
+            "Supplier return invoice {$invoice->invoice_number} has been created for supplier {$invoice->supplier->name}.",
+            [
+                'type' => 'supplier_return_created',
+                'pharmacy_id' => $pharmacy->id,
+                'supplier_return_invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'supplier_id' => $invoice->supplier_id,
+                'refund_total' => $invoice->refund_total,
+            ]
+        );
+
+        return $invoice;
     }
 
     public function cancel(SupplierReturnInvoice $invoice, User $user): SupplierReturnInvoice
@@ -72,7 +103,7 @@ class SupplierReturnInvoiceService
             throw new \InvalidArgumentException('This return invoice has already been cancelled.');
         }
 
-        return DB::transaction(function () use ($invoice, $user) {
+        $invoice = DB::transaction(function () use ($invoice, $user) {
             $invoice->update(['status' => 'cancelled']);
 
             $this->reverseStock($invoice, $user);
@@ -85,6 +116,23 @@ class SupplierReturnInvoiceService
             }
             return $invoice->fresh(['items.product', 'supplier', 'originalPurchaseInvoice', 'createdBy']);
         });
+
+        $this->notifier->sendToPharmacy(
+            Pharmacy::findOrFail($invoice->pharmacy_id),
+            'Supplier Return Cancelled',
+            "Supplier return invoice {$invoice->invoice_number} has been cancelled.",
+            [
+                'type' => 'supplier_return_cancelled',
+                'pharmacy_id' => $invoice->pharmacy_id,
+                'supplier_return_invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'supplier_id' => $invoice->supplier_id,
+                'refund_total' => $invoice->refund_total,
+                'cancelled_by' => $user->id,
+            ]
+        );
+
+        return $invoice;
     }
 
     public function list(Pharmacy $pharmacy, array $filters = []): LengthAwarePaginator

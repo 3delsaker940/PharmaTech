@@ -12,10 +12,12 @@ class SupplierDebtService
 {
     public function __construct(
         private readonly CashBoxService $cashBoxService,
+        private readonly NotificationService $notifier,
     ) {}
+
     public function createFromInvoice(PurchaseInvoice $invoice): SupplierDebt
     {
-        return SupplierDebt::create([
+        $debt = SupplierDebt::create([
             'pharmacy_id'         => $invoice->pharmacy_id,
             'supplier_id'         => $invoice->supplier_id,
             'purchase_invoice_id' => $invoice->id,
@@ -24,6 +26,26 @@ class SupplierDebtService
             'remaining_amount'    => $invoice->amount_due,
             'status'              => 'open',
         ]);
+
+        $debt->load(['supplier', 'pharmacy']);
+
+        $this->notifier->sendToPharmacy(
+            $debt->pharmacy,
+            'New Supplier Debt',
+            "A new debt of {$debt->remaining_amount} has been created for supplier {$debt->supplier->name}.",
+            [
+                'type' => 'supplier_debt_created',
+                'pharmacy_id' => $debt->pharmacy_id,
+                'supplier_debt_id' => $debt->id,
+                'purchase_invoice_id' => $debt->purchase_invoice_id,
+                'supplier_id' => $debt->supplier_id,
+                'amount' => $debt->total_amount,
+                'remaining_amount' => $debt->remaining_amount,
+                'status' => $debt->status,
+            ]
+        );
+
+        return $debt;
     }
 
     public function cancelFromInvoice(PurchaseInvoice $invoice): void
@@ -37,7 +59,7 @@ class SupplierDebtService
         User         $user,
         array        $data
     ): SupplierDebt {
-        return DB::transaction(function () use ($debt, $user, $data) {
+        $result = DB::transaction(function () use ($debt, $user, $data) {
             $amount = (float) $data['amount'];
 
             $cashBox = $this->cashBoxService->getCashBox($debt->pharmacy_id);
@@ -51,7 +73,7 @@ class SupplierDebtService
                     $user
                 );
             }
-            SupplierDebtPayment::create([
+            $payment = SupplierDebtPayment::create([
                 'supplier_debt_id' => $debt->id,
                 'cash_transaction_id' => $transaction?->id,
                 'amount' => $amount,
@@ -88,7 +110,33 @@ class SupplierDebtService
                     'payment_status' => $invoicePaymentStatus,
                 ]);
             }
-            return $debt->fresh(['supplier', 'payments.createdBy', 'purchaseInvoice']);
+
+            return [
+                'debt' => $debt->fresh(['supplier', 'pharmacy', 'payments.createdBy', 'purchaseInvoice']),
+                'payment' => $payment,
+            ];
         });
+
+        $debt = $result['debt'];
+        $payment = $result['payment'];
+
+        // Notification is sent only after the transaction has committed.
+        $this->notifier->sendToPharmacy(
+            $debt->pharmacy,
+            'Supplier Debt Payment',
+            "A payment of {$payment->amount} has been made toward supplier {$debt->supplier->name}'s debt.",
+            [
+                'type' => 'supplier_debt_payment',
+                'pharmacy_id' => $debt->pharmacy_id,
+                'supplier_debt_id' => $debt->id,
+                'payment_id' => $payment->id,
+                'supplier_id' => $debt->supplier_id,
+                'amount' => $payment->amount,
+                'remaining_amount' => $debt->remaining_amount,
+                'status' => $debt->status,
+            ]
+        );
+
+        return $debt;
     }
 }

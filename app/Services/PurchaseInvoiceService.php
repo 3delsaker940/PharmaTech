@@ -15,6 +15,7 @@ class PurchaseInvoiceService
         private readonly StockService $stockService,
         private readonly CashBoxService $cashBoxService,
         private readonly SupplierDebtService $supplierDebtService,
+        private readonly NotificationService $notifier,
     ) {}
 
     public function list(Pharmacy $pharmacy, array $filters): LengthAwarePaginator
@@ -47,7 +48,7 @@ class PurchaseInvoiceService
 
     public function store(Pharmacy $pharmacy, User $user, array $data): PurchaseInvoice
     {
-        return DB::transaction(function () use ($pharmacy, $user, $data) {
+        $invoice = DB::transaction(function () use ($pharmacy, $user, $data) {
             $items         = $data['items'];
             $subtotal      = 0;
             $taxTotal      = 0;
@@ -147,6 +148,26 @@ class PurchaseInvoiceService
                 'supplierDebt',
             ]);
         });
+
+        // Notification is sent only after the transaction has committed.
+        // Note: if a supplier debt was created above, SupplierDebtService
+        // sends its own separate notification for that.
+        $this->notifier->sendToPharmacy(
+            $pharmacy,
+            'New Purchase Invoice',
+            "A new purchase invoice {$invoice->invoice_number} has been created from supplier {$invoice->supplier->name}.",
+            [
+                'type' => 'purchase_invoice_created',
+                'pharmacy_id' => $pharmacy->id,
+                'purchase_invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'supplier_id' => $invoice->supplier_id,
+                'created_by' => $user->id,
+                'grand_total' => $invoice->grand_total,
+            ]
+        );
+
+        return $invoice;
     }
 
     public function update(PurchaseInvoice $invoice, array $data): PurchaseInvoice
@@ -163,7 +184,7 @@ class PurchaseInvoiceService
             throw new \InvalidArgumentException('This invoice is already cancelled.');
         }
 
-        return DB::transaction(function () use ($invoice, $user) {
+        $invoice = DB::transaction(function () use ($invoice, $user) {
             $invoice->update(['status' => 'cancelled']);
 
             $this->stockService->reverseBatchesFromCancellation($invoice, $user);
@@ -185,6 +206,26 @@ class PurchaseInvoiceService
                 'supplierDebt',
             ]);
         });
+
+        $this->notifier->sendToPharmacy(
+            Pharmacy::findOrFail($invoice->pharmacy_id),
+            'Purchase Invoice Cancelled',
+            "Purchase invoice {$invoice->invoice_number} from supplier {$invoice->supplier->name} has been cancelled.",
+            [
+                'type' => 'purchase_invoice_cancelled',
+                'pharmacy_id' => $invoice->pharmacy_id,
+                'purchase_invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'supplier_id' => $invoice->supplier_id,
+                'grand_total' => $invoice->grand_total,
+                'amount_paid' => $invoice->amount_paid,
+                'amount_due' => $invoice->amount_due,
+                'payment_status' => $invoice->payment_status,
+                'cancelled_by' => $user->id,
+            ]
+        );
+
+        return $invoice;
     }
 
     public function findById(Pharmacy $pharmacy, int $id): PurchaseInvoice

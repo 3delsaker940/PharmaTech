@@ -13,6 +13,7 @@ class CustomerDebtService
 {
     public function __construct(
         private readonly CashBoxService $cashBoxService,
+        private readonly NotificationService $notifier,
     ) {}
 
     public function list(Pharmacy $pharmacy, array $filters = []): LengthAwarePaginator
@@ -36,7 +37,7 @@ class CustomerDebtService
         User $user,
         array $data
     ): CustomerDebt {
-        return DB::transaction(function () use ($debt, $user, $data) {
+        $result = DB::transaction(function () use ($debt, $user, $data) {
             $amount = (float) $data['amount'];
 
             $cashBox = $this->cashBoxService->getCashBox($debt->pharmacy_id);
@@ -51,7 +52,7 @@ class CustomerDebtService
                 );
             }
 
-            CustomerDebtPayment::create([
+            $payment = CustomerDebtPayment::create([
                 'customer_debt_id' => $debt->id,
                 'cash_transaction_id'=> $transaction?->id,
                 'amount' => $amount,
@@ -88,7 +89,34 @@ class CustomerDebtService
                     'payment_status' => $invoicePaymentStatus,
                 ]);
             }
-            return $debt->fresh(['customer', 'payments.createdBy', 'salesInvoice']);
+
+            return [
+                'debt' => $debt->fresh(['customer', 'pharmacy', 'payments.createdBy', 'salesInvoice']),
+                'payment' => $payment,
+            ];
         });
+
+        $debt = $result['debt'];
+        $payment = $result['payment'];
+
+        // Notification is sent only after the transaction has committed.
+        $this->notifier->sendToPharmacy(
+            $debt->pharmacy,
+            'Customer Debt Payment',
+            "A payment of {$payment->amount} has been made toward customer {$debt->customer->full_name}'s debt.",
+            [
+                'type' => 'customer_debt_payment',
+                'pharmacy_id' => $debt->pharmacy_id,
+                'customer_debt_id' => $debt->id,
+                'payment_id' => $payment->id,
+                'customer_id' => $debt->customer_id,
+                'sales_invoice_id' => $debt->sales_invoice_id,
+                'amount' => $payment->amount,
+                'remaining_amount' => $debt->remaining_amount,
+                'status' => $debt->status,
+            ]
+        );
+
+        return $debt;
     }
 }

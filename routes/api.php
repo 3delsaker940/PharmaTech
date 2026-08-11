@@ -198,6 +198,8 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
         Route::post('/inventory/check-drug-interactions', [DrugInteractionController::class, 'checkInteractions']);
         Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
 
+
+        Route::get('/notifications', [NotificationController::class, 'index']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
         Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     });
