@@ -86,120 +86,203 @@ Route::post('auth/google/complete-profile', [AuthController::class, 'completePro
 Route::prefix('pharmacy')
     ->middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
-        Route::get('/products', [InventoryController::class, 'getAllPharmacyProducts']);
-        Route::get('/{productId}/stock-batches', [InventoryController::class, 'getProductStockBatches']);
-        Route::get('/category/{categoryId}/products', [InventoryController::class, 'getProductsByCategory']);
+        Route::get('/products', [InventoryController::class, 'getAllPharmacyProducts'])
+            ->middleware('permission:view-inventory');
+        Route::get('/{productId}/stock-batches', [InventoryController::class, 'getProductStockBatches'])
+            ->middleware('permission:view-inventory');
+        Route::get('/category/{categoryId}/products', [InventoryController::class, 'getProductsByCategory'])
+            ->middleware('permission:view-inventory');
     });
 
 Route::prefix('products')
     ->middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
-        Route::get('{product}/batches/available', [ProductController::class, 'availableBatches']);
-        Route::get('low-stock', [ProductController::class, 'lowStock']);
-        Route::get('barcode/{barcode}',         [ProductController::class, 'lookupByBarcode']);
-        Route::get('',                           [ProductController::class, 'index']);
-        Route::post('',                          [ProductController::class, 'store']);
-        Route::get('{product}',                 [ProductController::class, 'show']);
-        Route::put('{product}',                 [ProductController::class, 'update']);
-        Route::delete('{product}',              [ProductController::class, 'destroy']);
-        Route::patch('{product}/restore',       [ProductController::class, 'restore'])->withTrashed();
+        Route::get('{product}/batches/available', [ProductController::class, 'availableBatches'])
+            ->middleware('permission:view-products');
+        Route::get('low-stock', [ProductController::class, 'lowStock'])
+            ->middleware('permission:view-products');
+        Route::get('barcode/{barcode}', [ProductController::class, 'lookupByBarcode'])
+            ->middleware('permission:view-products');
+        Route::get('', [ProductController::class, 'index'])
+            ->middleware('permission:view-products');
+        Route::post('', [ProductController::class, 'store'])
+            ->middleware('permission:create-products');
+        Route::get('{product}', [ProductController::class, 'show'])
+            ->middleware('permission:view-products');
+        Route::put('{product}', [ProductController::class, 'update'])
+            ->middleware('permission:update-products');
+        Route::delete('{product}', [ProductController::class, 'destroy'])
+            ->middleware('permission:delete-products');
+        Route::patch('{product}/restore', [ProductController::class, 'restore'])
+            ->middleware('permission:restore-products')
+            ->withTrashed();
 
-        Route::get('/{product}/medical-info',    [ProductMedicalInfoController::class, 'show']);
-        Route::put('{product}/medical-info',    [ProductMedicalInfoController::class, 'upsert']);
-        Route::delete('{product}/medical-info', [ProductMedicalInfoController::class, 'destroy']);
+        Route::get('/{product}/medical-info', [ProductMedicalInfoController::class, 'show'])
+            ->middleware('permission:view-products');
+        Route::put('{product}/medical-info', [ProductMedicalInfoController::class, 'upsert'])
+            ->middleware('permission:update-products');
+        Route::delete('{product}/medical-info', [ProductMedicalInfoController::class, 'destroy'])
+            ->middleware('permission:delete-products');
     });
 
 Route::prefix('suppliers')
     ->middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
-        Route::get('',                          [SupplierController::class, 'index']);
-        Route::post('',                         [SupplierController::class, 'store']);
-        Route::get('{supplier}',               [SupplierController::class, 'show']);
-        Route::put('{supplier}',               [SupplierController::class, 'update']);
-        Route::delete('{supplier}',        [SupplierController::class, 'destroy']);
-        Route::patch('{supplier}/restore', [SupplierController::class, 'restore'])->withTrashed();
+        Route::get('', [SupplierController::class, 'index'])
+            ->middleware('permission:view-suppliers');
+        Route::post('', [SupplierController::class, 'store'])
+            ->middleware('permission:create-suppliers');
+        Route::get('{supplier}', [SupplierController::class, 'show'])
+            ->middleware('permission:view-suppliers');
+        Route::put('{supplier}', [SupplierController::class, 'update'])
+            ->middleware('permission:update-suppliers');
+        Route::delete('{supplier}', [SupplierController::class, 'destroy'])
+            ->middleware('permission:delete-suppliers');
+        Route::patch('{supplier}/restore', [SupplierController::class, 'restore'])
+            ->middleware('permission:restore-suppliers')
+            ->withTrashed();
     });
 
-Route::get('categories', [CategoryController::class, 'index']);
-Route::get('units', [UnitController::class, 'index']);
-Route::get('companies',  [CompanyController::class, 'index']);
-Route::get('companies/{company}', [CompanyController::class, 'show']);
+Route::get('categories', [CategoryController::class, 'index'])
+    ->middleware(['auth:sanctum', 'permission:view-categories']);
+Route::get('units', [UnitController::class, 'index'])
+    ->middleware(['auth:sanctum', 'permission:view-units']);
+Route::get('companies', [CompanyController::class, 'index'])
+    ->middleware(['auth:sanctum', 'permission:view-companies']);
+Route::get('companies/{company}', [CompanyController::class, 'show'])
+    ->middleware(['auth:sanctum', 'permission:view-companies']);
 
 Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
     ->group(function () {
-        Route::get('categories/{category}', [CategoryController::class, 'show']);
+        Route::get('categories/{category}', [CategoryController::class, 'show'])
+            ->middleware('permission:view-categories');
 
-        Route::get('supplier-debts',                 [SupplierDebtController::class, 'index']);
-        Route::get('supplier-debts/{supplierDebt}',  [SupplierDebtController::class, 'show']);
-        Route::post('supplier-debts/{supplierDebt}/pay', [SupplierDebtController::class, 'pay']);
+        Route::get('supplier-debts', [SupplierDebtController::class, 'index'])
+            ->middleware('permission:view-supplier-debts');
+        Route::get('supplier-debts/{supplierDebt}', [SupplierDebtController::class, 'show'])
+            ->middleware('permission:view-supplier-debts');
+        Route::post('supplier-debts/{supplierDebt}/pay', [SupplierDebtController::class, 'pay'])
+            ->middleware('permission:pay-supplier-debts');
 
-        Route::get('customer-debts', [CustomerDebtController::class, 'index']);
-        Route::get('customer-debts/{customerDebt}', [CustomerDebtController::class, 'show']);
-        Route::post('customer-debts/{customerDebt}/pay', [CustomerDebtController::class, 'pay']);
+        Route::get('customer-debts', [CustomerDebtController::class, 'index'])
+            ->middleware('permission:view-customer-debts');
+        Route::get('customer-debts/{customerDebt}', [CustomerDebtController::class, 'show'])
+            ->middleware('permission:view-customer-debts');
+        Route::post('customer-debts/{customerDebt}/pay', [CustomerDebtController::class, 'pay'])
+            ->middleware('permission:pay-customer-debts');
 
 
-        Route::get('purchase-invoices',                    [PurchaseInvoiceController::class, 'index']);
-        Route::post('purchase-invoices',                   [PurchaseInvoiceController::class, 'store']);
-        Route::get('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'show']);
-        Route::put('purchase-invoices/{purchaseInvoice}',  [PurchaseInvoiceController::class, 'update']);
-        Route::patch('purchase-invoices/{purchaseInvoice}/cancel', [PurchaseInvoiceController::class, 'cancel']);
+        Route::get('purchase-invoices', [PurchaseInvoiceController::class, 'index'])
+            ->middleware('permission:view-purchase-invoices');
+        Route::post('purchase-invoices', [PurchaseInvoiceController::class, 'store'])
+            ->middleware('permission:create-purchase-invoices');
+        Route::get('purchase-invoices/{purchaseInvoice}', [PurchaseInvoiceController::class, 'show'])
+            ->middleware('permission:view-purchase-invoices');
+        Route::put('purchase-invoices/{purchaseInvoice}', [PurchaseInvoiceController::class, 'update'])
+            ->middleware('permission:update-purchase-invoices');
+        Route::patch('purchase-invoices/{purchaseInvoice}/cancel', [PurchaseInvoiceController::class, 'cancel'])
+            ->middleware('permission:cancel-purchase-invoices');
 
-        Route::get('stock-batches', [StockBatchController::class, 'index']);
-        Route::get('stock-batches/{stockBatch}', [StockBatchController::class, 'show']);
-        Route::patch('stock-batches/{stockBatch}/mark-expired', [StockBatchController::class, 'markExpired']);
+        Route::get('stock-batches', [StockBatchController::class, 'index'])
+            ->middleware('permission:view-stock');
+        Route::get('stock-batches/{stockBatch}', [StockBatchController::class, 'show'])
+            ->middleware('permission:view-stock');
+        Route::patch('stock-batches/{stockBatch}/mark-expired', [StockBatchController::class, 'markExpired'])
+            ->middleware('permission:manage-stock');
 
-        Route::get('stock-movements', [StockMovementController::class, 'index']);
-        Route::get('stock-movements/{stockMovement}', [StockMovementController::class, 'show']);
+        Route::get('stock-movements', [StockMovementController::class, 'index'])
+            ->middleware('permission:view-stock');
+        Route::get('stock-movements/{stockMovement}', [StockMovementController::class, 'show'])
+            ->middleware('permission:view-stock');
 
-        Route::get('stock-adjustments', [StockAdjustmentController::class, 'index']);
-        Route::post('stock-adjustments',  [StockAdjustmentController::class, 'store']);
-        Route::post('stock-adjustments/bulk', [StockAdjustmentController::class, 'bulkStore']);
+        Route::get('stock-adjustments', [StockAdjustmentController::class, 'index'])
+            ->middleware('permission:view-stock');
+        Route::post('stock-adjustments', [StockAdjustmentController::class, 'store'])
+            ->middleware('permission:manage-stock');
+        Route::post('stock-adjustments/bulk', [StockAdjustmentController::class, 'bulkStore'])
+            ->middleware('permission:manage-stock');
 
-        Route::get('cash-boxes', [CashBoxController::class, 'show']);
-        Route::post('cash-boxes', [CashBoxController::class, 'store']);
-        Route::get('cash-boxes/transactions', [CashBoxController::class, 'transactions']);
-        Route::get('cash-boxes/statistics', [CashBoxController::class, 'statistics']);
+        Route::get('cash-boxes', [CashBoxController::class, 'show'])
+            ->middleware('permission:view-cash-box');
+        Route::post('cash-boxes', [CashBoxController::class, 'store'])
+            ->middleware('permission:manage-cash-box');
+        Route::get('cash-boxes/transactions', [CashBoxController::class, 'transactions'])
+            ->middleware('permission:view-cash-box');
+        Route::get('cash-boxes/statistics', [CashBoxController::class, 'statistics'])
+            ->middleware('permission:view-cash-box');
 
-        Route::get('customers', [CustomerController::class, 'index']);
-        Route::post('customers', [CustomerController::class, 'store']);
-        Route::get('customers/{customer}', [CustomerController::class, 'show']);
-        Route::put('customers/{customer}', [CustomerController::class, 'update']);
-        Route::delete('customers/{customer}', [CustomerController::class, 'destroy']);
-        Route::patch('customers/{customer}/restore', [CustomerController::class, 'restore'])->withTrashed();
+        Route::get('customers', [CustomerController::class, 'index'])
+            ->middleware('permission:view-customers');
+        Route::post('customers', [CustomerController::class, 'store'])
+            ->middleware('permission:create-customers');
+        Route::get('customers/{customer}', [CustomerController::class, 'show'])
+            ->middleware('permission:view-customers');
+        Route::put('customers/{customer}', [CustomerController::class, 'update'])
+            ->middleware('permission:update-customers');
+        Route::delete('customers/{customer}', [CustomerController::class, 'destroy'])
+            ->middleware('permission:delete-customers');
+        Route::patch('customers/{customer}/restore', [CustomerController::class, 'restore'])
+            ->middleware('permission:restore-customers')
+            ->withTrashed();
 
-        Route::get('sales-invoices', [SalesInvoiceController::class, 'index']);
-        Route::post('sales-invoices', [SalesInvoiceController::class, 'store']);
-        Route::get('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'show']);
-        Route::put('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'update']);
-        Route::patch('sales-invoices/{salesInvoice}/cancel', [SalesInvoiceController::class, 'cancel']);
+        Route::get('sales-invoices', [SalesInvoiceController::class, 'index'])
+            ->middleware('permission:view-sales-invoices');
+        Route::post('sales-invoices', [SalesInvoiceController::class, 'store'])
+            ->middleware('permission:create-sales-invoices');
+        Route::get('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'show'])
+            ->middleware('permission:view-sales-invoices');
+        Route::put('sales-invoices/{salesInvoice}', [SalesInvoiceController::class, 'update'])
+            ->middleware('permission:update-sales-invoices');
+        Route::patch('sales-invoices/{salesInvoice}/cancel', [SalesInvoiceController::class, 'cancel'])
+            ->middleware('permission:cancel-sales-invoices');
 
-        Route::get('customer-return-invoices', [CustomerReturnInvoiceController::class, 'index']);
-        Route::post('customer-return-invoices', [CustomerReturnInvoiceController::class, 'store']);
-        Route::get('customer-return-invoices/{customerReturnInvoice}', [CustomerReturnInvoiceController::class, 'show']);
-        Route::patch('customer-return-invoices/{customerReturnInvoice}/cancel', [CustomerReturnInvoiceController::class, 'cancel']);
+        Route::get('customer-return-invoices', [CustomerReturnInvoiceController::class, 'index'])
+            ->middleware('permission:view-customer-returns');
+        Route::post('customer-return-invoices', [CustomerReturnInvoiceController::class, 'store'])
+            ->middleware('permission:create-customer-returns');
+        Route::get('customer-return-invoices/{customerReturnInvoice}', [CustomerReturnInvoiceController::class, 'show'])
+            ->middleware('permission:view-customer-returns');
+        Route::patch('customer-return-invoices/{customerReturnInvoice}/cancel', [CustomerReturnInvoiceController::class, 'cancel'])
+            ->middleware('permission:cancel-customer-returns');
 
-        Route::get('supplier-return-invoices', [SupplierReturnInvoiceController::class, 'index']);
-        Route::post('supplier-return-invoices', [SupplierReturnInvoiceController::class, 'store']);
-        Route::get('supplier-return-invoices/{supplierReturnInvoice}', [SupplierReturnInvoiceController::class, 'show']);
-        Route::patch('supplier-return-invoices/{supplierReturnInvoice}/cancel', [SupplierReturnInvoiceController::class, 'cancel']);
+        Route::get('supplier-return-invoices', [SupplierReturnInvoiceController::class, 'index'])
+            ->middleware('permission:view-supplier-returns');
+        Route::post('supplier-return-invoices', [SupplierReturnInvoiceController::class, 'store'])
+            ->middleware('permission:create-supplier-returns');
+        Route::get('supplier-return-invoices/{supplierReturnInvoice}', [SupplierReturnInvoiceController::class, 'show'])
+            ->middleware('permission:view-supplier-returns');
+        Route::patch('supplier-return-invoices/{supplierReturnInvoice}/cancel', [SupplierReturnInvoiceController::class, 'cancel'])
+            ->middleware('permission:cancel-supplier-returns');
 
-        Route::get('dashboard/header', [DashboardController::class, 'header']);
-        Route::get('dashboard/cards', [DashboardController::class, 'cards']);
-        Route::get('dashboard/weekly-revenue', [DashboardController::class, 'weeklyRevenue']);
-        Route::get('dashboard/transactions', [DashboardController::class, 'transactions']);
+        Route::get('dashboard/header', [DashboardController::class, 'header'])
+            ->middleware('permission:view-dashboard');
+        Route::get('dashboard/cards', [DashboardController::class, 'cards'])
+            ->middleware('permission:view-dashboard');
+        Route::get('dashboard/weekly-revenue', [DashboardController::class, 'weeklyRevenue'])
+            ->middleware('permission:view-dashboard');
+        Route::get('dashboard/transactions', [DashboardController::class, 'transactions'])
+            ->middleware('permission:view-dashboard');
 
-        Route::get('reports/sales', [ReportController::class, 'sales']);
-        Route::get('reports/top-products', [ReportController::class, 'topProducts']);
-        Route::get('reports/profit', [ReportController::class, 'profit']);
-        Route::get('reports/supplier-prices', [ReportController::class, 'supplierPrices']);
-        Route::get('reports/inventory-value', [ReportController::class, 'inventoryValue']);
-        Route::get('reports/stock-health', [ReportController::class, 'stockHealth']);
-        Route::get('/inventory/predict-needs', [WeatherDrivenInventoryController::class, 'predictInventoryNeeds']);
-        Route::post('/inventory/check-drug-interactions', [DrugInteractionController::class, 'checkInteractions']);
+        Route::get('reports/sales', [ReportController::class, 'sales'])
+            ->middleware('permission:view-reports');
+        Route::get('reports/top-products', [ReportController::class, 'topProducts'])
+            ->middleware('permission:view-reports');
+        Route::get('reports/profit', [ReportController::class, 'profit'])
+            ->middleware('permission:view-reports');
+        Route::get('reports/supplier-prices', [ReportController::class, 'supplierPrices'])
+            ->middleware('permission:view-reports');
+        Route::get('reports/inventory-value', [ReportController::class, 'inventoryValue'])
+            ->middleware('permission:view-reports');
+        Route::get('reports/stock-health', [ReportController::class, 'stockHealth'])
+            ->middleware('permission:view-reports');
+        Route::get('/inventory/predict-needs', [WeatherDrivenInventoryController::class, 'predictInventoryNeeds'])
+            ->middleware('permission:view-inventory-predictions');
+        Route::post('/inventory/check-drug-interactions', [DrugInteractionController::class, 'checkInteractions'])
+            ->middleware('permission:check-drug-interactions');
         Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
 
 
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
-        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
     });
