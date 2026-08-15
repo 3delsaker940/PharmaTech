@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Resources\StockBatchResource;
 use App\Models\StockBatch;
 use App\Services\StockService;
@@ -11,8 +10,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class StockBatchController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function __construct(protected StockService $stockService) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -44,7 +41,7 @@ class StockBatchController extends Controller
 
     public function show(Request $request, StockBatch $stockBatch): StockBatchResource
     {
-        $this->authorizePharmacyResource($request, $stockBatch->pharmacy_id);
+        $this->authorize('view', $stockBatch);
 
         $stockBatch->load('product');
 
@@ -53,7 +50,7 @@ class StockBatchController extends Controller
 
     public function markExpired(Request $request, StockBatch $stockBatch): StockBatchResource
     {
-        $this->authorizePharmacyResource($request, $stockBatch->pharmacy_id);
+        $this->authorize('markExpired', $stockBatch);
 
         $stockBatch = $this->stockService->expireBatch($stockBatch, $request->user()->id);
 
