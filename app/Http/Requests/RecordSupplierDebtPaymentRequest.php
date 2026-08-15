@@ -9,7 +9,7 @@ class RecordSupplierDebtPaymentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('pay', $this->route('supplierDebt'));
     }
 
     public function rules(): array
