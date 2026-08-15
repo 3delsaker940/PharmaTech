@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductCardResource;
@@ -17,8 +16,6 @@ use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function __construct(private readonly ProductService $productService) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -58,14 +55,14 @@ class ProductController extends Controller
 
     public function show(Request $request, Product $product): ProductResource
     {
-        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+        $this->authorize('view', $product);
 
         return new ProductResource($product->load(['category', 'company', 'baseUnit', 'sellingUnit', 'medicalInfo']));
     }
 
     public function update(UpdateProductRequest $request, Product $product): ProductResource
     {
-        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+        // Ownership already verified in UpdateProductRequest::authorize()
 
         $updated = $this->productService->update($product, $request->validated());
 
@@ -74,7 +71,7 @@ class ProductController extends Controller
 
     public function destroy(Request $request, Product $product): JsonResponse
     {
-        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+        $this->authorize('delete', $product);
 
         $this->productService->delete($product);
 
@@ -83,7 +80,7 @@ class ProductController extends Controller
 
     public function restore(Request $request, Product $product): ProductResource
     {
-        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+        $this->authorize('restore', $product);
 
         $restored = $this->productService->restore($product);
 
@@ -148,7 +145,7 @@ class ProductController extends Controller
 
     public function availableBatches(Request $request, Product $product): AnonymousResourceCollection
     {
-        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+        $this->authorize('view', $product);
 
         $batches = $product->stockBatches()
             ->where('status', 'active')

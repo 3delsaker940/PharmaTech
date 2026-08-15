@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\UpsertProductMedicalInfoRequest;
 use App\Http\Resources\ProductMedicalInfoResource;
 use App\Models\Product;
@@ -11,11 +10,9 @@ use Illuminate\Http\Request;
 
 class ProductMedicalInfoController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function show(Request $request, Product $product): JsonResponse
     {
-        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+        $this->authorize('view', $product);
 
         $medicalInfo = $product->medicalInfo;
 
@@ -28,7 +25,7 @@ class ProductMedicalInfoController extends Controller
 
     public function upsert(UpsertProductMedicalInfoRequest $request, Product $product): JsonResponse
     {
-        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+        // Ownership already verified in UpsertProductMedicalInfoRequest::authorize()
 
         $medicalInfo = $product->medicalInfo()->updateOrCreate(
             ['product_id' => $product->id],
@@ -44,7 +41,7 @@ class ProductMedicalInfoController extends Controller
 
     public function destroy(Request $request, Product $product): JsonResponse
     {
-        $this->authorizePharmacyResource($request, $product->pharmacy_id);
+        $this->authorize('delete', $product);
 
         $product->medicalInfo()?->delete();
 
