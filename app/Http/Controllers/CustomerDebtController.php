@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\RecordCustomerDebtPaymentRequest;
 use App\Http\Resources\CustomerDebtResource;
 use App\Models\CustomerDebt;
@@ -12,8 +11,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CustomerDebtController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function __construct(private readonly CustomerDebtService $customerDebtService) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -27,7 +24,7 @@ class CustomerDebtController extends Controller
 
     public function show(Request $request, CustomerDebt $customerDebt): CustomerDebtResource
     {
-        $this->authorizePharmacyResource($request, $customerDebt->pharmacy_id);
+        $this->authorize('view', $customerDebt);
         $customerDebt->load(['customer', 'payments.createdBy', 'salesInvoice']);
         return new CustomerDebtResource($customerDebt);
     }
@@ -36,7 +33,7 @@ class CustomerDebtController extends Controller
         RecordCustomerDebtPaymentRequest $request,
         CustomerDebt$customerDebt
     ): CustomerDebtResource {
-        $this->authorizePharmacyResource($request, $customerDebt->pharmacy_id);
+        // Ownership already verified in RecordCustomerDebtPaymentRequest::authorize()
 
         $updated = $this->customerDebtService->recordPayment(
             $customerDebt,
