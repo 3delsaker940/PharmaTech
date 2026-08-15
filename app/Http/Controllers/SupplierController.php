@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\Supplier\StoreSupplierRequest;
 use App\Http\Requests\Supplier\UpdateSupplierRequest;
 use App\Http\Resources\SupplierResource;
@@ -14,8 +13,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SupplierController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function __construct(private readonly SupplierService $supplierService) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -42,14 +39,14 @@ class SupplierController extends Controller
 
     public function show(Request $request, Supplier $supplier): SupplierResource
     {
-        $this->authorizePharmacyResource($request, $supplier->pharmacy_id);
+        $this->authorize('view', $supplier);
         $supplier->load('company');
         return new SupplierResource($supplier);
     }
 
     public function update(UpdateSupplierRequest $request, Supplier $supplier): SupplierResource
     {
-        $this->authorizePharmacyResource($request, $supplier->pharmacy_id);
+        // Ownership already verified in UpdateSupplierRequest::authorize()
 
         $updated = $this->supplierService->update($supplier, $request->validated());
 
@@ -58,7 +55,7 @@ class SupplierController extends Controller
 
     public function destroy(Request $request, Supplier $supplier): JsonResponse
     {
-        $this->authorizePharmacyResource($request, $supplier->pharmacy_id);
+        $this->authorize('delete', $supplier);
 
         $this->supplierService->delete($supplier);
 
@@ -67,7 +64,7 @@ class SupplierController extends Controller
 
     public function restore(Request $request, Supplier $supplier): SupplierResource
     {
-        $this->authorizePharmacyResource($request, $supplier->pharmacy_id);
+        $this->authorize('restore', $supplier);
 
         $restored = $this->supplierService->restore($supplier);
 
