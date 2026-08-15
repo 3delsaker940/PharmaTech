@@ -22,13 +22,9 @@ class NotificationController extends Controller
     /**
      * Mark one notification as read.
      */
-    public function markAsRead($id, Request $request)
+    public function markAsRead(AppNotification $notification, Request $request)
     {
-        $user_id = $request->user()->id;
-
-        $notification = AppNotification::where('id', $id)
-            ->where('user_id', $user_id)
-            ->firstOrFail();
+        $this->authorize('update', $notification);
 
         $notification->update([
             'read_at' => now(),
