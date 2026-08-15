@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Resources\StockMovementResource;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
@@ -10,8 +9,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class StockMovementController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function index(Request $request): AnonymousResourceCollection
     {
         $pharmacy = $request->attributes->get('pharmacy');
@@ -35,7 +32,7 @@ class StockMovementController extends Controller
 
     public function show(Request $request, StockMovement $stockMovement): StockMovementResource
     {
-        $this->authorizePharmacyResource($request, $stockMovement->pharmacy_id);
+        $this->authorize('view', $stockMovement);
 
         $stockMovement->load(['product', 'createdBy', 'batch']);
 
