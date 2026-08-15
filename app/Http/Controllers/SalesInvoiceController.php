@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\StoreSalesInvoiceRequest;
 use App\Http\Requests\UpdateSalesInvoiceRequest;
 use App\Http\Requests\IndexSalesInvoiceRequest;
@@ -15,8 +14,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class SalesInvoiceController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function __construct(private readonly SalesInvoiceService $salesInvoiceService) {}
 
     public function index(IndexSalesInvoiceRequest $request): AnonymousResourceCollection
@@ -51,14 +48,14 @@ class SalesInvoiceController extends Controller
 
     public function show(Request $request, SalesInvoice $salesInvoice): SalesInvoiceResource
     {
-        $this->authorizePharmacyResource($request, $salesInvoice->pharmacy_id);
+        $this->authorize('view', $salesInvoice);
         $salesInvoice->load(['items.product', 'customer', 'customerDebt', 'createdBy']);
         return new SalesInvoiceResource($salesInvoice);
     }
 
     public function update(UpdateSalesInvoiceRequest $request, SalesInvoice $salesInvoice): SalesInvoiceResource
     {
-        $this->authorizePharmacyResource($request, $salesInvoice->pharmacy_id);
+        // Ownership already verified in UpdateSalesInvoiceRequest::authorize()
         if ($salesInvoice->status === 'cancelled') {
             abort(422, 'Cannot update a cancelled invoice.');
         }
@@ -68,7 +65,7 @@ class SalesInvoiceController extends Controller
 
     public function cancel(Request $request, SalesInvoice $salesInvoice): SalesInvoiceResource
     {
-        $this->authorizePharmacyResource($request, $salesInvoice->pharmacy_id);
+        $this->authorize('cancel', $salesInvoice);
         $cancelled = $this->salesInvoiceService->cancel($salesInvoice, $request->user());
         return new SalesInvoiceResource($cancelled);
     }
