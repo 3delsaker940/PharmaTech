@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\StorePurchaseInvoiceRequest;
 use App\Http\Requests\UpdatePurchaseInvoiceRequest;
 use App\Http\Resources\PurchaseInvoiceResource;
@@ -14,8 +13,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class PurchaseInvoiceController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function __construct(private readonly PurchaseInvoiceService $purchaseInvoiceService) {}
 
     public function index(Request $request): AnonymousResourceCollection
@@ -46,7 +43,7 @@ class PurchaseInvoiceController extends Controller
 
     public function show(Request $request, PurchaseInvoice $purchaseInvoice): PurchaseInvoiceResource
     {
-        $this->authorizePharmacyResource($request, $purchaseInvoice->pharmacy_id);
+        $this->authorize('view', $purchaseInvoice);
 
         $purchaseInvoice->load([
             'supplier',
@@ -60,7 +57,7 @@ class PurchaseInvoiceController extends Controller
 
     public function update(UpdatePurchaseInvoiceRequest $request, PurchaseInvoice $purchaseInvoice): PurchaseInvoiceResource
     {
-        $this->authorizePharmacyResource($request, $purchaseInvoice->pharmacy_id);
+        // Ownership already verified in UpdatePurchaseInvoiceRequest::authorize()
 
         $updated = $this->purchaseInvoiceService->update($purchaseInvoice, $request->validated());
 
@@ -69,7 +66,7 @@ class PurchaseInvoiceController extends Controller
 
     public function cancel(Request $request, PurchaseInvoice $purchaseInvoice): PurchaseInvoiceResource
     {
-        $this->authorizePharmacyResource($request, $purchaseInvoice->pharmacy_id);
+        $this->authorize('cancel', $purchaseInvoice);
 
         $cancelled = $this->purchaseInvoiceService->cancel($purchaseInvoice, $request->user());
 
