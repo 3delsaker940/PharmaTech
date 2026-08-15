@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\InventoryPredictionService;
 use Illuminate\Http\Request;
 use Exception;
+use Throwable;
 
 class WeatherDrivenInventoryController extends Controller
 {
@@ -21,7 +22,7 @@ class WeatherDrivenInventoryController extends Controller
             );
 
             return response()->json($result);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             return response()->json([
                 'status'  => 'error',
                 'message' => 'An error occurred: ' . $e->getMessage()
