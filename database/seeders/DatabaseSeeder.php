@@ -57,6 +57,7 @@ class DatabaseSeeder extends Seeder
             CustomerDebtPaymentSeeder::class,
             SupplierReturnInvoiceSeeder::class,
             CustomerReturnInvoiceSeeder::class,
+            RolesAndPermissionsSeeder::class,
         ]);
     }
 }
