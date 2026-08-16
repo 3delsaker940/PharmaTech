@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            RolesAndPermissionsSeeder::class,
             LocationSeeder::class,
             UnitSeeder::class,
             CategorySeeder::class,
@@ -45,6 +46,7 @@ class DatabaseSeeder extends Seeder
                 'pharmacy_id' => $pharmacy->id,
             ]
         );
+        $user->assignRole('pharmacy_owner');
         $user->markEmailAsVerified();
 
         $this->call([
@@ -57,7 +59,6 @@ class DatabaseSeeder extends Seeder
             CustomerDebtPaymentSeeder::class,
             SupplierReturnInvoiceSeeder::class,
             CustomerReturnInvoiceSeeder::class,
-            RolesAndPermissionsSeeder::class,
         ]);
     }
 }
