@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Requests\UpdateCustomerRequest;
 use App\Http\Resources\CustomerResource;
@@ -13,8 +12,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CustomerController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function index(Request $request): AnonymousResourceCollection
     {
         $pharmacy = $request->attributes->get('pharmacy');
@@ -46,24 +43,24 @@ class CustomerController extends Controller
     }
     public function show(Request $request, Customer $customer): CustomerResource
     {
-        $this->authorizePharmacyResource($request, $customer->pharmacy_id);
+        $this->authorize('view', $customer);
         return new CustomerResource($customer);
     }
     public function update(UpdateCustomerRequest $request, Customer $customer): CustomerResource
     {
-        $this->authorizePharmacyResource($request, $customer->pharmacy_id);
+        // Ownership already verified in UpdateCustomerRequest::authorize()
         $customer->update($request->validated());
         return new CustomerResource($customer->fresh());
     }
     public function destroy(Request $request, Customer $customer): JsonResponse
     {
-        $this->authorizePharmacyResource($request, $customer->pharmacy_id);
+        $this->authorize('delete', $customer);
         $customer->delete();
         return response()->json(['message' => 'Customer deleted successfully.'], 200);
     }
     public function restore(Request $request, Customer $customer): CustomerResource
     {
-        $this->authorizePharmacyResource($request, $customer->pharmacy_id);
+        $this->authorize('restore', $customer);
         $customer->restore();
         return new CustomerResource($customer->fresh());
     }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Concerns\AuthorizesPharmacyResource;
 use App\Http\Requests\StoreCustomerReturnInvoiceRequest;
 use App\Http\Resources\CustomerReturnInvoiceResource;
 use App\Models\CustomerReturnInvoice;
@@ -13,8 +12,6 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CustomerReturnInvoiceController extends Controller
 {
-    use AuthorizesPharmacyResource;
-
     public function __construct(
         private readonly CustomerReturnInvoiceService $customerReturnInvoiceService
     ) {}
@@ -43,14 +40,14 @@ class CustomerReturnInvoiceController extends Controller
 
     public function show(Request $request, CustomerReturnInvoice $customerReturnInvoice): CustomerReturnInvoiceResource
     {
-        $this->authorizePharmacyResource($request, $customerReturnInvoice->pharmacy_id);
+        $this->authorize('view', $customerReturnInvoice);
         $customerReturnInvoice->load(['items.product', 'customer', 'originalSalesInvoice', 'createdBy']);
         return new CustomerReturnInvoiceResource($customerReturnInvoice);
     }
 
     public function cancel(Request $request, CustomerReturnInvoice $customerReturnInvoice): CustomerReturnInvoiceResource
     {
-        $this->authorizePharmacyResource($request, $customerReturnInvoice->pharmacy_id);
+        $this->authorize('cancel', $customerReturnInvoice);
 
         $cancelled = $this->customerReturnInvoiceService->cancel(
             $customerReturnInvoice,

@@ -108,6 +108,7 @@ class AuthController extends Controller
                         'last_name' => $request->last_name,
                         'phone_number' => $request->phone_number,
                     ]);
+                    $user->assignRole('pharmacy_owner');
                     $user->sendEmailVerificationNotification();
                     $tokens = $this->issueTokenPair(
                         $user,
