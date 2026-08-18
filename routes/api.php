@@ -20,6 +20,7 @@ use App\Http\Controllers\SupplierDebtController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SupplierReturnInvoiceController;
 use App\Http\Controllers\WeatherDrivenInventoryController;
+use App\Http\Controllers\PharmacistController;
 use App\Http\Controllers\DrugInteractionController;
 use App\Http\Controllers\UnitController;
 use Illuminate\Http\Request;
@@ -281,6 +282,16 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
             ->middleware('permission:check-drug-interactions');
         Route::post('/user/fcm-token', [AuthController::class, 'updateFcmToken']);
 
+        Route::get('/pharmacists', [PharmacistController::class, 'index'])
+            ->middleware('permission:view-pharmacists');
+        Route::post('/pharmacists', [PharmacistController::class, 'store'])
+            ->middleware('permission:create-pharmacists');
+        Route::get('/pharmacists/{id}', [PharmacistController::class, 'show'])
+            ->middleware('permission:view-pharmacists');
+        Route::put('/pharmacists/{id}', [PharmacistController::class, 'update'])
+            ->middleware('permission:update-pharmacists');
+        Route::delete('/pharmacists/{id}', [PharmacistController::class, 'destroy'])
+            ->middleware('permission:delete-pharmacists');
 
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);

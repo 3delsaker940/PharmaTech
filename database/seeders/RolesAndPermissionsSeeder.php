@@ -39,6 +39,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'delete-customers',
             'restore-customers',
 
+            // Pharmacists
+            'view-pharmacists',
+            'create-pharmacists',
+            'update-pharmacists',
+            'delete-pharmacists',
+
             // Customer debts
             'view-customer-debts',
             'pay-customer-debts',
@@ -105,11 +111,12 @@ class RolesAndPermissionsSeeder extends Seeder
         $systemAdmin->syncPermissions($permissions);
 
         // pharmacy_owner: full operational access within their own pharmacy,
-        // including destructive/financial actions and restores.
+        // including destructive/financial actions, restores, and managing pharmacists.
         $pharmacyOwner->syncPermissions([
             'view-products', 'create-products', 'update-products', 'delete-products', 'restore-products',
             'view-suppliers', 'create-suppliers', 'update-suppliers', 'delete-suppliers', 'restore-suppliers',
             'view-customers', 'create-customers', 'update-customers', 'delete-customers', 'restore-customers',
+            'view-pharmacists', 'create-pharmacists', 'update-pharmacists', 'delete-pharmacists',
             'view-customer-debts', 'pay-customer-debts',
             'view-supplier-debts', 'pay-supplier-debts',
             'view-purchase-invoices', 'create-purchase-invoices', 'update-purchase-invoices', 'cancel-purchase-invoices',
@@ -123,8 +130,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'view-dashboard', 'view-reports',
         ]);
 
-        // pharmacist: day-to-day operational access, without deletes/restores
-        // or cash box management.
+        // pharmacist: day-to-day operational access, without deletes/restores,
+        // cash box management, or pharmacist management.
         $pharmacist->syncPermissions([
             'view-products', 'create-products', 'update-products',
             'view-suppliers',
