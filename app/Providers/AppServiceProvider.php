@@ -34,6 +34,9 @@ use App\Policies\StockBatchPolicy;
 use App\Policies\StockMovementPolicy;
 use App\Policies\AppNotificationPolicy;
 
+use Illuminate\Auth\Events\Verified;
+use App\Listeners\SendPharmacistPasswordAfterVerification;
+use Illuminate\Support\Facades\Event;
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -88,5 +91,9 @@ class AppServiceProvider extends ServiceProvider
                 ]
             );
         });
+        Event::listen(
+            Verified::class,
+            SendPharmacistPasswordAfterVerification::class
+        );
     }
 }

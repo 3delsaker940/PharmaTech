@@ -3,22 +3,23 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Auth\Events\Verified;
 
 class EmailVerificationService
 {
     /**
-     * التحقق من البريد الإلكتروني وإنشاء رابط التوجيه
+     * Verify email and return redirect payload.
      */
-    public function verifyEmail(int $id, string $hash, string $platform, ?string $timestamp): array
+    public function verifyEmail(int $id, string $hash, ?string $platform, ?string $timestamp): array
     {
+        $platform = $platform ?: 'web';
         $user = User::findOrFail($id);
 
-        if (!hash_equals($hash, sha1($user->email))) {
+        if (!hash_equals($hash, sha1($user->getEmailForVerification()))) {
             return ['success' => false, 'message' => 'Invalid verification link', 'code' => 403];
         }
 
-        $timestamp = $timestamp ?: time();
+        $timestamp = $timestamp ?: (string) time();
 
         if ($user->hasVerifiedEmail()) {
             return [
@@ -27,7 +28,9 @@ class EmailVerificationService
             ];
         }
 
-        $user->markEmailAsVerified();
+        if ($user->markEmailAsVerified()) {
+            event(new Verified($user));
+        }
 
         return [
             'success' => true,
@@ -36,7 +39,7 @@ class EmailVerificationService
     }
 
     /**
-     * إعادة إرسال رابط التحقق
+     * Resend verification link.
      */
     public function resendLink(string $email): array
     {
