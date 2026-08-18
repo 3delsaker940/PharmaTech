@@ -13,6 +13,8 @@ use App\Http\Resources\RegisterResource;
 use App\Http\Resources\LoginResource;
 use App\Models\User;
 use App\Services\Auth\RefreshTokenService;
+use App\Services\Auth\EmailVerificationService;
+use App\Services\Auth\PasswordResetService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -137,7 +139,7 @@ class AuthController extends Controller
         }
     }
 
-    public function login(LoginRequest  $request, RefreshTokenService $refreshTokenService)
+    public function login(LoginRequest $request, RefreshTokenService $refreshTokenService)
     {
         Log::info('Attempting user login', [
             'email' => $request->email
@@ -241,7 +243,7 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function  logoutAll(Request $request, RefreshTokenService $refreshTokenService)
+    public function logoutAll(Request $request, RefreshTokenService $refreshTokenService)
     {
         $request->user()->tokens()->delete();
         $request->user()->update(['fcm_token' => null]);
@@ -252,101 +254,83 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function verifyEmail($id, $hash, Request $request)
+    public function verifyEmail($id, $hash, Request $request, EmailVerificationService $verificationService)
     {
         $request->validate([
             'platform' => 'required|in:web,mobile',
             't' => 'nullable'
         ]);
-        $user = User::findOrFail($id);
 
-        if (!hash_equals($hash, sha1($user->email))) {
-            return response()->json(['message' => 'Invalid verification link'], 403);
-        }
-        $timestamp = $request->query('t', time());
-
-        if ($user->hasVerifiedEmail()) {
-            if ($request->query('platform') === 'web') {
-                return redirect(env('FRONTEND_WEB_VERIFIED_URL') . '?status=already_verified&email=' . urlencode($user->email) . '&t=' . $timestamp);
-            }
-            return redirect(env('FRONTEND_APP_VERIFIED_URL') . '?status=already_verified&email=' . urlencode($user->email) . '&t=' . $timestamp);
-        }
-        $user->markEmailAsVerified();
-        if ($request->query('platform') === 'web') {
-            return redirect(env('FRONTEND_WEB_VERIFIED_URL') . '?status=success&email=' . urlencode($user->email) . '&t=' . $timestamp);
-        }
-
-        return redirect(env('FRONTEND_APP_VERIFIED_URL') . '?status=success&email=' . urlencode($user->email) . '&t=' . $timestamp);
-    }
-
-    public function resendVerificationEmail(Request $request)
-    {
-        $user = User::where('email', $request->email)->firstOrFail();
-        if ($user->hasVerifiedEmail()) {
-            return response()->json(['message' => 'Email already verified'], 200);
-        }
-        $user->sendEmailVerificationNotification();
-        return response()->json(['message' => 'Link sent']);
-    }
-
-    public function resetPassword(ResetPasswordRequest $request, RefreshTokenService $refreshTokenService)
-    {
-        Log::info('Attempting password reset', [
-            'email' => $request->email,
-        ]);
-
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) use ($refreshTokenService) {
-                $user->forceFill([
-                    'password' => Hash::make($password),
-                ])->save();
-
-                $user->tokens()->delete();
-                $refreshTokenService->revokeAllForUser($user);
-            }
+        $result = $verificationService->verifyEmail(
+            (int) $id,
+            $hash,
+            $request->query('platform'),
+            $request->query('t')
         );
-        log::info('Password reset attempt', [
-            'status' => $status
-        ]);
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['code']);
+        }
+
+        return redirect($result['redirect_url']);
+    }
+
+    public function resendVerificationEmail(Request $request, EmailVerificationService $verificationService)
+    {
+        $request->validate(['email' => 'required|email|exists:users,email']);
+
+        $result = $verificationService->resendLink($request->email);
+
+        if (!$result['success']) {
+            return response()->json(['message' => $result['message']], $result['code']);
+        }
+
+        return response()->json(['message' => $result['message']]);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request, PasswordResetService $passwordResetService)
+    {
+        Log::info('Attempting password reset', ['email' => $request->email]);
+
+        $status = $passwordResetService->resetPassword(
+            $request->only('email', 'password', 'password_confirmation', 'token')
+        );
+
+        Log::info('Password reset attempt', ['status' => $status]);
+
         return $status === Password::PASSWORD_RESET
             ? response()->json(['message' => 'Your password has been reset!'], 200)
             : response()->json(['message' => __($status)], 400);
     }
 
-    public function forgotPassword(Request $request)
+    public function forgotPassword(Request $request, PasswordResetService $passwordResetService)
     {
         $request->validate([
             'email' => 'required|email|exists:users,email',
         ]);
+
         $user = User::where('email', $request->email)->firstOrFail();
+
         if (!$user->hasVerifiedEmail()) {
             return response()->json(['message' => 'Please verify your email first.'], 403);
         }
-        $status = Password::sendResetLink($request->only('email'));
+
+        $status = $passwordResetService->sendResetLink($request->only('email'));
+
         return $status === Password::RESET_LINK_SENT
             ? response()->json(['message' => 'Reset link sent to your email!'], 200)
             : response()->json(['message' => __($status)], 400);
     }
 
-    public function redirectToApp(Request $request)
+    public function redirectToApp(Request $request, PasswordResetService $passwordResetService)
     {
-        $token = $request->query('token');
-        $email = $request->query('email');
-        $platform = $request->query('platform', 'mobile');
-        if ($platform === 'web') {
-            return redirect(
-                env('FRONTEND_WEB_RESET_URL')
-                    . '?token=' . urlencode($token)
-                    . '&email=' . urlencode($email)
-            );
-        }
-
-        return redirect(
-            env('FRONTEND_APP_RESET_URL')
-                . '?token=' . urlencode($token)
-                . '&email=' . urlencode($email)
+        $redirectUrl = $passwordResetService->getRedirectUrl(
+            $request->query('token'),
+            $request->query('email'),
+            $request->query('platform', 'mobile')
         );
+
+        return redirect($redirectUrl);
     }
 
     public function googleLogin(Request $request, RefreshTokenService $refreshTokenService)
@@ -411,7 +395,7 @@ class AuthController extends Controller
                 'is_new_user' => $isNewUser,
                 'message' => $isNewUser ? 'Account created successfully' : 'Login successful'
             ])->response()->setStatusCode(200);
-        } catch (\Throwable  $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Something went wrong on the server',
                 'error' => env('APP_DEBUG') ? $e->getMessage() : null
