@@ -18,13 +18,39 @@ class PharmacyResource extends Resource
     protected static ?string $model = Pharmacy::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('name')->required(),
-                Forms\Components\TextInput::make('phone_number'),
-                Forms\Components\TextInput::make('address'),
+                Forms\Components\TextInput::make('name')
+                    ->label('Pharmacy Name')
+                    ->disabled(),
+
+                // إظهار المحافظة أولاً
+                Forms\Components\TextInput::make('governorate')
+                    ->label('Governorate')
+                    ->formatStateUsing(fn($record) => $record?->city?->governorate?->name)
+                    ->disabled(),
+
+                // إظهار المدينة
+                Forms\Components\TextInput::make('city')
+                    ->label('City')
+                    ->formatStateUsing(fn($record) => $record?->city?->name)
+                    ->disabled(),
+
+                Forms\Components\TextInput::make('address')
+                    ->label('Address')
+                    ->disabled(),
+
+                Forms\Components\TextInput::make('phone_number')
+                    ->label('Phone Number')
+                    ->tel()
+                    ->disabled(),
+
+                Forms\Components\TextInput::make('license_number')
+                    ->label('License Number')
+                    ->disabled(),
             ]);
     }
 
