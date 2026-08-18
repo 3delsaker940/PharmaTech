@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -10,10 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Filament\Models\Contracts\HasName;
 use Spatie\Permission\Traits\HasRoles;
 
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements MustVerifyEmail, FilamentUser, HasName
 {
     use HasFactory, Notifiable, HasApiTokens, HasRoles;
     protected $guarded = ['id'];
@@ -24,6 +27,14 @@ class User extends Authenticatable implements MustVerifyEmail
             'password' => 'hashed',
             'last_login_at' => 'datetime',
         ];
+    }
+    public function getFilamentName(): string
+    {
+        return "{$this->first_name} {$this->last_name}";
+    }
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->hasRole('system_admin') && $this->status === 'active';
     }
     public function refreshTokens(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
