@@ -18,19 +18,50 @@ class UserResource extends Resource
     protected static ?string $model = User::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('first_name')->required(),
-                Forms\Components\TextInput::make('last_name')->required(),
-                Forms\Components\TextInput::make('email')->email()->required(),
+                // حقول للعرض فقط (Read-Only)
+                Forms\Components\TextInput::make('first_name')
+                    ->label('First Name')
+                    ->disabled(),
+
+                Forms\Components\TextInput::make('father_name')
+                    ->label('Father Name')
+                    ->disabled(),
+
+                Forms\Components\TextInput::make('last_name')
+                    ->label('Last Name')
+                    ->disabled(),
+
+                Forms\Components\TextInput::make('email_verified_at')
+                    ->label('Email Verified At')
+                    ->disabled(),
+
+                // الحقول القابلة للتعديل
+                Forms\Components\TextInput::make('email')
+                    ->label('Email')
+                    ->email()
+                    ->required(),
+
+                Forms\Components\TextInput::make('phone_number')
+                    ->label('Phone Number')
+                    ->tel(),
+
                 Forms\Components\Select::make('status')
+                    ->label('Status')
                     ->options([
                         'active' => 'Active',
                         'inactive' => 'Inactive',
                     ])
+                    ->required(),
+
+                Forms\Components\Select::make('roles')
+                    ->label('Role')
+                    ->relationship('roles', 'name')
+                    ->preload()
+                    ->searchable()
                     ->required(),
             ]);
     }
