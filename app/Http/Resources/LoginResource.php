@@ -32,6 +32,7 @@ class LoginResource extends JsonResource
             'email' => $this->email,
             'phone_number' => $this->phone_number,
             'avatar'         => $this->avatar,
+            'role' => $this->getRoleNames()->first(),
             'is_verified'    => (bool) $this->email_verified_at,
         ],
 

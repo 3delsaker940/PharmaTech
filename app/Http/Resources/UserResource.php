@@ -19,6 +19,7 @@ class UserResource extends JsonResource
             'avatar' => $this->avatar,
             'phone_number' => $this->phone_number,
             'status' => $this->status,
+            'role' => $this->getRoleNames()->first(),
             'is_verified' => (bool) $this->email_verified_at,
             'last_login_at' => $this->last_login_at,
             'created_at' => $this->created_at,
