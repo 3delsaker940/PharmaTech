@@ -83,4 +83,8 @@ class PharmacyResource extends Resource
             'edit' => Pages\EditPharmacy::route('/{record}/edit'),
         ];
     }
+    public static function canCreate(): bool
+    {
+        return false;
+    }
 }
