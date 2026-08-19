@@ -27,6 +27,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ProfileController;
 use App\Models\Governorate;
 use App\Http\Resources\GovernorateResource;
 use App\Http\Resources\CityResource;
@@ -292,6 +293,8 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
             ->middleware('permission:update-pharmacists');
         Route::delete('/pharmacists/{id}', [PharmacistController::class, 'destroy'])
             ->middleware('permission:delete-pharmacists');
+
+        Route::put('/profile', [ProfileController::class, 'update']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
