@@ -20,8 +20,12 @@ class CustomerController extends Controller
                 $request->filled('search'),
                 fn ($q) => $q->where(function ($inner) use ($request) {
                     $term = '%' . $request->input('search') . '%';
+                    // phone is encrypted — LIKE cannot match it, so we
+                    // compare against the deterministic hash instead
+                    // (exact match only, once the phone is normalized).
+                    $phoneHash = Customer::hashForLookup(Customer::normalizePhone($request->input('search')));
                     $inner->where('full_name', 'like', $term)
-                        ->orWhere('phone', 'like', $term);
+                        ->orWhere('phone_hash', $phoneHash);
                 })
             )
             ->when($request->boolean('with_trashed'), fn ($q) => $q->withTrashed())

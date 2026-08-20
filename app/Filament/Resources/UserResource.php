@@ -73,7 +73,15 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('id')->sortable(),
                 Tables\Columns\TextColumn::make('first_name')->label('First Name')->searchable(),
                 Tables\Columns\TextColumn::make('last_name')->label('Last Name')->searchable(),
-                Tables\Columns\TextColumn::make('email')->searchable(),
+                Tables\Columns\TextColumn::make('email')
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        // email is encrypted — the default LIKE search
+                        // Filament builds cannot match it, so we compare
+                        // against the deterministic hash instead
+                        // (exact match only, once normalized).
+                        $hash = \App\Models\User::hashForLookup(\App\Models\User::normalizeEmail($search));
+                        return $query->where('email_hash', $hash);
+                    }),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
