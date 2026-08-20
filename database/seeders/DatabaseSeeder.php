@@ -4,13 +4,16 @@ namespace Database\Seeders;
 
 use App\Models\Pharmacy;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
+    // NOTE: WithoutModelEvents was removed on purpose. User/Customer/Supplier
+    // now compute their *_hash columns inside a `saving` model event
+    // (see App\Models\User::booted(), etc). Disabling model events here
+    // would silently skip that computation and leave rows unfindable by
+    // findByEmail()/findByPhone() (and break login for the seeded user).
 
     public function run(): void
     {
@@ -35,9 +38,10 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $user = User::firstOrCreate(
-            ['email' => '3delsaker940@gmail.com'],
-            [
+        $user = User::findByEmail('3delsaker940@gmail.com');
+        if (! $user) {
+            $user = User::create([
+                'email' => '3delsaker940@gmail.com',
                 'first_name' => 'Adel',
                 'father_name' => 'Giath',
                 'last_name' => 'Saker',
@@ -45,8 +49,8 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('Password123'),
                 'status' => 'active',
                 'pharmacy_id' => $pharmacy->id,
-            ]
-        );
+            ]);
+        }
         $user->assignRole('pharmacy_owner');
         $user->markEmailAsVerified();
 
