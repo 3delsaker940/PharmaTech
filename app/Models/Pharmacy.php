@@ -10,6 +10,15 @@ class Pharmacy extends Model
 {
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return [
+            'address' => 'encrypted',
+            'phone_number' => 'encrypted',
+            'license_number' => 'encrypted',
+        ];
+    }
+
     public function city(): BelongsTo
     {
         return $this->belongsTo(City::class);
