@@ -18,6 +18,7 @@ class UserResource extends Resource
     protected static ?string $model = User::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?int $navigationSort = 1;
     public static function form(Form $form): Form
     {
         return $form
@@ -75,10 +76,6 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('last_name')->label('Last Name')->searchable(),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(query: function (Builder $query, string $search): Builder {
-                        // email is encrypted — the default LIKE search
-                        // Filament builds cannot match it, so we compare
-                        // against the deterministic hash instead
-                        // (exact match only, once normalized).
                         $hash = \App\Models\User::hashForLookup(\App\Models\User::normalizeEmail($search));
                         return $query->where('email_hash', $hash);
                     }),
@@ -91,14 +88,29 @@ class UserResource extends Resource
                     }),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
             ])
-            ->filters([])
+            ->filters([
+                Tables\Filters\TrashedFilter::make(),
+            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\RestoreAction::make(),
+                Tables\Actions\ForceDeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\RestoreBulkAction::make(),
+                    Tables\Actions\ForceDeleteBulkAction::make(),
                 ]),
+            ]);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
             ]);
     }
 
@@ -113,7 +125,6 @@ class UserResource extends Resource
     {
         return [
             'index' => Pages\ListUsers::route('/'),
-            'create' => Pages\CreateUser::route('/create'),
             'edit' => Pages\EditUser::route('/{record}/edit'),
         ];
     }
