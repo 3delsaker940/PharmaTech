@@ -18,10 +18,12 @@ return new class extends Migration
             $table->string('father_name')->nullable();
             $table->string('last_name');
             $table->string('fcm_token')->nullable();
-            $table->string('email')->unique();
+            $table->string('email');
+            $table->string('email_hash', 64)->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
             $table->string('phone_number')->nullable();
+            $table->string('phone_hash', 64)->nullable()->unique();
             $table->string('google_id')->nullable();
             $table->string('avatar')->nullable();
             $table->enum('status', ['active', 'suspended', 'inactive'])->default('active');

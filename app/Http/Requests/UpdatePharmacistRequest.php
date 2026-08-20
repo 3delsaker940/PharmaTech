@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdatePharmacistRequest extends FormRequest
 {
@@ -24,14 +24,30 @@ class UpdatePharmacistRequest extends FormRequest
                 'sometimes',
                 'required',
                 'email',
-                Rule::unique('users', 'email')->ignore($pharmacistId),
+                function (string $attribute, mixed $value, \Closure $fail) use ($pharmacistId) {
+                    $hash = User::hashForLookup(User::normalizeEmail($value));
+                    $existing = User::where('email_hash', $hash)
+                        ->where('id', '!=', $pharmacistId)
+                        ->exists();
+                    if ($existing) {
+                        $fail('The email has already been taken.');
+                    }
+                },
             ],
             'phone_number' => [
                 'sometimes',
                 'required',
                 'string',
                 'regex:/^(?:\+9639|09|009639)\d{8}$/',
-                Rule::unique('users', 'phone_number')->ignore($pharmacistId),
+                function (string $attribute, mixed $value, \Closure $fail) use ($pharmacistId) {
+                    $hash = User::hashForLookup(User::normalizePhone($value));
+                    $existing = User::where('phone_hash', $hash)
+                        ->where('id', '!=', $pharmacistId)
+                        ->exists();
+                    if ($existing) {
+                        $fail('The phone number has already been taken.');
+                    }
+                },
             ],
         ];
     }

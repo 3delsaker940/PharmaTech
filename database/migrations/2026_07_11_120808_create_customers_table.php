@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('pharmacy_id')->constrained('pharmacies')->cascadeOnDelete();
             $table->string('full_name');
             $table->string('phone')->nullable();
+            $table->string('phone_hash', 64)->nullable()->index();
             $table->text('notes')->nullable();
             $table->softDeletes();
             $table->timestamps();

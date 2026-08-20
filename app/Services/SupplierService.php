@@ -22,9 +22,12 @@ class SupplierService
                 filled($filters['search'] ?? null),
                 fn ($q) => $q->where(function ($inner) use ($filters) {
                     $term = '%' . $filters['search'] . '%';
+                    // phone is encrypted — LIKE cannot match it, so we
+                    // compare against the deterministic hash instead
+                    // (exact match only, once the phone is normalized).
+                    $phoneHash = Supplier::hashForLookup(Supplier::normalizePhone($filters['search']));
                     $inner->where('name', 'like', $term)
-                        ->orWhere('phone', 'like', $term)
-                        ->orWhere('email', 'like', $term);
+                        ->orWhere('phone_hash', $phoneHash);
                 })
             )
             ->with('company')

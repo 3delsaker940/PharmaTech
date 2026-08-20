@@ -37,6 +37,8 @@ use App\Policies\AppNotificationPolicy;
 use Illuminate\Auth\Events\Verified;
 use App\Listeners\SendPharmacistPasswordAfterVerification;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Auth;
+use App\Auth\HashedEmailUserProvider;
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -49,6 +51,10 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Auth::provider('hashed-eloquent', function ($app, array $config) {
+            return new HashedEmailUserProvider($app['hash'], $config['model']);
+        });
+
         Gate::policy(Product::class, ProductPolicy::class);
         Gate::policy(Supplier::class, SupplierPolicy::class);
         Gate::policy(Customer::class, CustomerPolicy::class);

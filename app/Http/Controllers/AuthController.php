@@ -277,7 +277,7 @@ class AuthController extends Controller
 
     public function resendVerificationEmail(Request $request, EmailVerificationService $verificationService)
     {
-        $request->validate(['email' => 'required|email|exists:users,email']);
+        $request->validate(['email' => 'required|email']);
 
         $result = $verificationService->resendLink($request->email);
 
@@ -306,10 +306,14 @@ class AuthController extends Controller
     public function forgotPassword(Request $request, PasswordResetService $passwordResetService)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
         ]);
 
-        $user = User::where('email', $request->email)->firstOrFail();
+        $user = User::findByEmail($request->email);
+
+        if (! $user) {
+            return response()->json(['message' => 'We could not find a user with that email address.'], 404);
+        }
 
         if (!$user->hasVerifiedEmail()) {
             return response()->json(['message' => 'Please verify your email first.'], 403);
@@ -354,18 +358,20 @@ class AuthController extends Controller
             $parts = $name ? explode(' ', $name, 2) : [];
             $firstName = $parts[0] ?? 'Google';
             $lastName = $parts[1] ?? 'User';
-            $user = User::firstOrCreate(
-                ['email' => $email],
-                [
+            $user = User::findByEmail($email);
+            $isNewUser = false;
+            if (! $user) {
+                $user = User::create([
+                    'email' => $email,
                     'first_name' => $firstName,
                     'last_name' => $lastName,
                     'google_id' => $googleId,
                     'avatar' => $avatar,
                     'password' => Hash::make(Str::random(32)),
                     'email_verified_at' => now(),
-                ]
-            );
-            $isNewUser = $user->wasRecentlyCreated;
+                ]);
+                $isNewUser = true;
+            }
             if (!$isNewUser) {
                 $user->forceFill([
                     'google_id' => $user->google_id ?: $googleId,
