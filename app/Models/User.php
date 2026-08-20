@@ -15,11 +15,12 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Filament\Models\Contracts\HasName;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Hidden(['password', 'remember_token', 'email_hash', 'phone_hash'])]
 class User extends Authenticatable implements MustVerifyEmail, FilamentUser, HasName
 {
-    use HasFactory, Notifiable, HasApiTokens, HasRoles, HasHashedFields;
+    use HasFactory, Notifiable, HasApiTokens, HasRoles, HasHashedFields, SoftDeletes;
 
     protected $guarded = ['id'];
 
