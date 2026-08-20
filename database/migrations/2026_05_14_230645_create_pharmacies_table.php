@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('phone_number')->nullable();
             $table->string('license_number');
             $table->enum('status', ['active', 'suspended', 'archived', 'pending'])->default('pending');
+            $table->softDeletes();
             $table->timestamps();
         });
         Schema::table('users', function (Blueprint $table) {
