@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
@@ -16,6 +17,13 @@ class ProfileController extends Controller
         return response()->json([
             'message' => 'Profile updated successfully',
             'user'    => new UserResource($user->fresh()),
+        ]);
+    }
+    public function show(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        return response()->json([
+            'user' => new UserResource($user),
         ]);
     }
 }

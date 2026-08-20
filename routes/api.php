@@ -295,6 +295,7 @@ Route::middleware(['auth:sanctum', 'resolve.pharmacy'])
             ->middleware('permission:delete-pharmacists');
 
         Route::put('/profile', [ProfileController::class, 'update']);
+        Route::get('/profile', [ProfileController::class, 'show']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::patch('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
