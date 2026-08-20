@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CompleteProfileRequest extends FormRequest
@@ -20,9 +20,17 @@ class CompleteProfileRequest extends FormRequest
             'last_name' => ['required', 'string', 'max:255'],
             'phone_number' => [
                 'required',
-                'unique:users,phone_number',
                 'string',
-                'regex:/^(?:\+9639|09|009639)\d{8}$/'
+                'regex:/^(?:\+9639|09|009639)\d{8}$/',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    $hash = User::hashForLookup(User::normalizePhone($value));
+                    $existing = User::where('phone_hash', $hash)
+                        ->where('id', '!=', $this->user()->id)
+                        ->exists();
+                    if ($existing) {
+                        $fail('The phone number has already been taken.');
+                    }
+                },
             ],
             'pharmacy_name' => ['required', 'string', 'max:255'],
             'city_id' => ['required', 'exists:cities,id'],
