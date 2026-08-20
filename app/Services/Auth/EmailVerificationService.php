@@ -43,7 +43,11 @@ class EmailVerificationService
      */
     public function resendLink(string $email): array
     {
-        $user = User::where('email', $email)->firstOrFail();
+        $user = User::findByEmail($email);
+
+        if (! $user) {
+            return ['success' => false, 'message' => 'User not found', 'code' => 404];
+        }
 
         if ($user->hasVerifiedEmail()) {
             return ['success' => false, 'message' => 'Email already verified', 'code' => 200];
