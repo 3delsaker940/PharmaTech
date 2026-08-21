@@ -28,6 +28,7 @@ class UserObserver
             Mail::to($user->email)->send(new UserStatusChangedMail($user));
             if ($user->status === 'inactive') {
                 $user->tokens()->delete();
+                $user->refreshTokens()->delete();
             }
         }
     }
