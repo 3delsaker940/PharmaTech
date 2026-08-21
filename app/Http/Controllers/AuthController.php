@@ -465,6 +465,9 @@ class AuthController extends Controller
                 ]);
                 Log::info('User registered successfully', ['user_id' => $user->id]);
                 $user->load('pharmacy.city');
+                if (! $user->hasRole('pharmacy_owner')) {
+                    $user->assignRole('pharmacy_owner');
+                }
                 return (new RegisterResource($user))
                     ->response()
                     ->setStatusCode(200);
