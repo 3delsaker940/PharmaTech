@@ -40,6 +40,24 @@ class CustomerSeeder extends Seeder
                 'phone' => null,
                 'notes' => null,
             ],
+            [
+                'pharmacy_id' => $pharmacy->id,
+                'full_name' => 'Layla',
+                'phone' => '+963933333333',
+                'notes' => 'Regular customer — buys vitamins monthly',
+            ],
+            [
+                'pharmacy_id' => $pharmacy->id,
+                'full_name' => 'Karim',
+                'phone' => '+963944444444',
+                'notes' => null,
+            ],
+            [
+                'pharmacy_id' => $pharmacy->id,
+                'full_name' => 'Sara',
+                'phone' => null,
+                'notes' => 'Walk-in, prefers cash payment',
+            ],
         ];
 
         foreach ($customers as $customer) {
