@@ -155,6 +155,18 @@ class AuthController extends Controller
             }
             /** @var \App\Models\User $user */
             $user = Auth::user();
+            if ($user->status === 'inactive') {
+                Auth::logout();
+                Log::warning('Inactive user login blocked', [
+                    'user_id' => $user->id,
+                    'email' => $request->email,
+                ]);
+
+                return response()->json([
+                    'message' => 'Your account is inactive.'
+                ], 403);
+            }
+
             if (!$user->hasVerifiedEmail()) {
                 Auth::logout();
                 $user->sendEmailVerificationNotification();
@@ -378,6 +390,17 @@ class AuthController extends Controller
                     'avatar' => $avatar ?: $user->avatar,
                     'email_verified_at' => $user->email_verified_at ?: now(),
                 ])->save();
+            }
+
+            if ($user->status === 'inactive') {
+                Log::warning('Inactive user Google login blocked', [
+                    'user_id' => $user->id,
+                    'email' => $email,
+                ]);
+
+                return response()->json([
+                    'message' => 'Your account is inactive.'
+                ], 403);
             }
 
             $tokens = $this->issueTokenPair(
