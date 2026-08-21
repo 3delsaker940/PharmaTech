@@ -25,6 +25,10 @@ class SalesInvoiceSeeder extends Seeder
         $customer1 = Customer::where('pharmacy_id', $pharmacy->id)->where('full_name', 'Hasan')->first();
         $customer2 = Customer::where('pharmacy_id', $pharmacy->id)->where('full_name', 'joao')->first();
         $customer3 = Customer::where('pharmacy_id', $pharmacy->id)->where('full_name', 'omid')->first();
+        $customer4 = Customer::where('pharmacy_id', $pharmacy->id)->where('full_name', 'Layla')->first();
+        $customer5 = Customer::where('pharmacy_id', $pharmacy->id)->where('full_name', 'Karim')->first();
+        // NOTE: 'Sara' is intentionally left with no sales invoices — a brand-new
+        // customer with no purchase history yet.
 
         if (! $customer1 || ! $customer2) {
             $this->command->warn('Customers not found. Run CustomerSeeder first.');
@@ -227,6 +231,245 @@ class SalesInvoiceSeeder extends Seeder
                 'notes'          => "Seeded — {$note} (day -{$day})",
                 'items'          => [
                     ['product_id' => $prod->id, 'quantity' => $varQty, 'selling_price' => $price, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // SECTION 4 — IMPORTED DATASET PRODUCTS (barcodes 19-31)
+        // Regular sales, seasonal spikes, and a couple of near-zero sellers
+        // (Spasmaver, One-Asian 1) to match their dead-stock / low-stock batches.
+        // ══════════════════════════════════════════════════════════════════════
+
+        $antitussive = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Anti-Tussive Hama Pharma')->first();
+        $unadol      = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Unadol FORTE')->first();
+        $brufen      = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Uni Brufen 400mg')->first();
+        $brandexP    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Brandex-P')->first();
+        $losartic    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Losartic')->first();
+        $panthenol   = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Panthenol Rama')->first();
+        $fucine      = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Fucine Dermic Ointment')->first();
+        $toularynx   = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Toularynx Thym')->first();
+        $bonacare    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'New Bonacare')->first();
+        $osteodam    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Osteodam Plus K2')->first();
+        $noflu       = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'NoFlu Day And Night')->first();
+
+        // Today / yesterday quick sales — keeps "Daily" filter populated
+        if ($unadol) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => null,
+                'invoice_date'   => $today->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 5000 * 4,
+                'notes'          => 'Seeded — Unadol FORTE walk-in, today',
+                'items'          => [
+                    ['product_id' => $unadol->id, 'quantity' => 4, 'selling_price' => 5000, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        if ($brufen) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer2->id,
+                'invoice_date'   => $today->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 7000 * 6,
+                'notes'          => 'Seeded — Uni Brufen sale, today',
+                'items'          => [
+                    ['product_id' => $brufen->id, 'quantity' => 6, 'selling_price' => 7000, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        if ($noflu) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer1->id,
+                'invoice_date'   => $today->copy()->subDay()->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 10500 * 2,
+                'notes'          => 'Seeded — NoFlu sale, yesterday',
+                'items'          => [
+                    ['product_id' => $noflu->id, 'quantity' => 2, 'selling_price' => 10500, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        // Daily rotation across the last 25 days for the steady sellers
+        $newDailyItems = array_values(array_filter([
+            $antitussive ? [$antitussive, 3, 9000]  : null,
+            $brufen      ? [$brufen,      6, 7000]  : null,
+            $unadol      ? [$unadol,      5, 5000]  : null,
+            $fucine      ? [$fucine,      2, 13500] : null,
+            $losartic    ? [$losartic,    3, 21000] : null,
+        ]));
+
+        if (count($newDailyItems) > 0) {
+            $nCount = count($newDailyItems);
+            for ($i = 1; $i <= 25; $i++) {
+                $date    = $today->copy()->subDays($i);
+                $pattern = $newDailyItems[$i % $nCount];
+                [$prod, $qty, $price] = $pattern;
+
+                $varQty = max(1, $qty + ($i % 3) - 1);
+
+                $service->store($pharmacy, $owner, [
+                    'customer_id'    => ($i % 5 === 0) ? $customer1->id : (($i % 8 === 0) ? $customer2->id : null),
+                    'invoice_date'   => $date->toDateString(),
+                    'payment_method' => ($i % 8 === 0) ? 'debt' : 'cash',
+                    'amount_paid'    => ($i % 8 === 0) ? 0 : ($varQty * $price),
+                    'notes'          => "Seeded — imported-dataset daily history day -{$i}",
+                    'items'          => [
+                        ['product_id' => $prod->id, 'quantity' => $varQty, 'selling_price' => $price, 'tax' => 0, 'discount' => 0],
+                    ],
+                ]);
+            }
+        }
+
+        // Brandex-P — a couple of small sales (batch was deliberately tiny → low stock)
+        if ($brandexP) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer1->id,
+                'invoice_date'   => $today->copy()->subDays(8)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 15500,
+                'notes'          => 'Seeded — Brandex-P sale',
+                'items'          => [
+                    ['product_id' => $brandexP->id, 'quantity' => 1, 'selling_price' => 15500, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        // Panthenol Rama — moderate sales
+        if ($panthenol) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer2->id,
+                'invoice_date'   => $today->copy()->subDays(6)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 6500 * 2,
+                'notes'          => 'Seeded — Panthenol Rama sale',
+                'items'          => [
+                    ['product_id' => $panthenol->id, 'quantity' => 2, 'selling_price' => 6500, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        // Toularynx Thym — a couple of sales chipping at the near-expiry batch
+        if ($toularynx) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer3?->id ?? $customer1->id,
+                'invoice_date'   => $today->copy()->subDays(2)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 6000 * 3,
+                'notes'          => 'Seeded — Toularynx Thym sale',
+                'items'          => [
+                    ['product_id' => $toularynx->id, 'quantity' => 3, 'selling_price' => 6000, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        // New Bonacare & Osteodam — vitamins, monthly-ish sales pattern (months 1-6)
+        for ($m = 1; $m <= 6; $m++) {
+            if ($bonacare) {
+                $service->store($pharmacy, $owner, [
+                    'customer_id'    => ($m % 2 === 0) ? $customer1->id : $customer2->id,
+                    'invoice_date'   => $today->copy()->subMonths($m)->subDays(3)->toDateString(),
+                    'payment_method' => 'cash',
+                    'amount_paid'    => 19000 * 2,
+                    'notes'          => "Seeded — New Bonacare bulk, month -{$m}",
+                    'items'          => [
+                        ['product_id' => $bonacare->id, 'quantity' => 2, 'selling_price' => 19000, 'tax' => 0, 'discount' => 0],
+                    ],
+                ]);
+            }
+
+            if ($osteodam) {
+                $service->store($pharmacy, $owner, [
+                    'customer_id'    => ($m % 2 === 0) ? $customer2->id : $customer1->id,
+                    'invoice_date'   => $today->copy()->subMonths($m)->subDays(8)->toDateString(),
+                    'payment_method' => 'cash',
+                    'amount_paid'    => 23000,
+                    'notes'          => "Seeded — Osteodam Plus K2 sale, month -{$m}",
+                    'items'          => [
+                        ['product_id' => $osteodam->id, 'quantity' => 1, 'selling_price' => 23000, 'tax' => 0, 'discount' => 0],
+                    ],
+                ]);
+            }
+        }
+
+        // NoFlu Day And Night — seasonal spike in the last 30 days (cold season)
+        if ($noflu) {
+            for ($i = 3; $i <= 28; $i += 4) {
+                $service->store($pharmacy, $owner, [
+                    'customer_id'    => ($i % 12 === 0) ? $customer1->id : null,
+                    'invoice_date'   => $today->copy()->subDays($i)->toDateString(),
+                    'payment_method' => 'cash',
+                    'amount_paid'    => 10500 * 3,
+                    'notes'          => "Seeded — NoFlu seasonal sale, day -{$i}",
+                    'items'          => [
+                        ['product_id' => $noflu->id, 'quantity' => 3, 'selling_price' => 10500, 'tax' => 0, 'discount' => 0],
+                    ],
+                ]);
+            }
+        }
+
+        // NOTE: Spasmaver and One-Asian 1 intentionally have NO sales records here
+        // — Spasmaver stays a dead-stock candidate, One-Asian 1 stays a
+        // critical low-stock item (matches their PurchaseInvoiceSeeder scenarios).
+
+        // ══════════════════════════════════════════════════════════════════════
+        // SECTION 5 — NEW CUSTOMERS (Layla, Karim)
+        // Layla: monthly vitamin buyer. Karim: occasional mixed purchases.
+        // 'Sara' is intentionally left with no invoices — brand-new customer.
+        // ══════════════════════════════════════════════════════════════════════
+
+        if ($customer4 && $bonacare) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer4->id,
+                'invoice_date'   => $today->copy()->subDays(5)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 19000,
+                'notes'          => 'Seeded — Layla, monthly vitamin purchase',
+                'items'          => [
+                    ['product_id' => $bonacare->id, 'quantity' => 1, 'selling_price' => 19000, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        if ($customer4 && $osteodam) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer4->id,
+                'invoice_date'   => $today->copy()->subDays(35)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 23000,
+                'notes'          => 'Seeded — Layla, previous month vitamin purchase',
+                'items'          => [
+                    ['product_id' => $osteodam->id, 'quantity' => 1, 'selling_price' => 23000, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        if ($customer5 && $panadol && $brufen) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer5->id,
+                'invoice_date'   => $today->copy()->subDays(7)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => (5500 * 2) + 7000,
+                'notes'          => 'Seeded — Karim, mixed purchase',
+                'items'          => [
+                    ['product_id' => $panadol->id, 'quantity' => 2, 'selling_price' => 5500, 'tax' => 0, 'discount' => 0],
+                    ['product_id' => $brufen->id,  'quantity' => 1, 'selling_price' => 7000, 'tax' => 0, 'discount' => 0],
+                ],
+            ]);
+        }
+
+        if ($customer5 && $noflu) {
+            $service->store($pharmacy, $owner, [
+                'customer_id'    => $customer5->id,
+                'invoice_date'   => $today->copy()->subDays(1)->toDateString(),
+                'payment_method' => 'debt',
+                'amount_paid'    => 0,
+                'notes'          => 'Seeded — Karim, on debt',
+                'items'          => [
+                    ['product_id' => $noflu->id, 'quantity' => 1, 'selling_price' => 10500, 'tax' => 0, 'discount' => 0],
                 ],
             ]);
         }
