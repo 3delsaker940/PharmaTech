@@ -39,6 +39,9 @@ use App\Listeners\SendPharmacistPasswordAfterVerification;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Auth;
 use App\Auth\HashedEmailUserProvider;
+use App\Models\User;
+use App\Observers\UserObserver;
+
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -51,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        User::observe(UserObserver::class);
         Auth::provider('hashed-eloquent', function ($app, array $config) {
             return new HashedEmailUserProvider($app['hash'], $config['model']);
         });
