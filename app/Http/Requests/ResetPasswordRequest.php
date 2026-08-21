@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -15,7 +16,15 @@ class ResetPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => 'required|email|exists:users,email',
+            'email' => [
+                'required',
+                'email',
+                function (string $attribute, mixed $value, \Closure $fail) {
+                    if (! User::findByEmail($value)) {
+                        $fail('The selected email is invalid.');
+                    }
+                },
+            ],
             'password' =>
             [
                 'required',
