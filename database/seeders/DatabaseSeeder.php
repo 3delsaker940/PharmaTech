@@ -46,7 +46,7 @@ class DatabaseSeeder extends Seeder
                 'father_name' => 'Giath',
                 'last_name' => 'Saker',
                 'phone_number' => '0935542610',
-                'password' => Hash::make('Password123'),
+                'password' => Hash::make('password123'),
                 'status' => 'active',
                 'pharmacy_id' => $pharmacy->id,
             ]);
@@ -63,7 +63,7 @@ class DatabaseSeeder extends Seeder
                 'father_name' => 'Giath',
                 'last_name' => 'Saker',
                 'phone_number' => '0935542611',
-                'password' => Hash::make('Password123'),
+                'password' => Hash::make('password123'),
                 'status' => 'active',
                 'pharmacy_id' => $pharmacy->id,
             ]);

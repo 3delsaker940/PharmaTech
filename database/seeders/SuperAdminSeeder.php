@@ -19,7 +19,7 @@ class SuperAdminSeeder extends Seeder
                 'email' => 'admin@pharmatech.com',
                 'first_name' => 'Super',
                 'last_name'  => 'Admin',
-                'password'   => Hash::make('Password321'),
+                'password'   => Hash::make('password321'),
                 'status'     => 'active',
                 'email_verified_at' => now(),
             ]);
