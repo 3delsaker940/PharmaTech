@@ -54,6 +54,23 @@ class DatabaseSeeder extends Seeder
         $user->assignRole('pharmacy_owner');
         $user->markEmailAsVerified();
 
+        // Second user — pharmacist role, same pharmacy
+        $pharmacistUser = User::findByEmail('adelsaker05@gmail.com');
+        if (! $pharmacistUser) {
+            $pharmacistUser = User::create([
+                'email' => 'adelsaker05@gmail.com',
+                'first_name' => 'Adel',
+                'father_name' => 'Giath',
+                'last_name' => 'Saker',
+                'phone_number' => '0935542611',
+                'password' => Hash::make('Password123'),
+                'status' => 'active',
+                'pharmacy_id' => $pharmacy->id,
+            ]);
+        }
+        $pharmacistUser->assignRole('pharmacist');
+        $pharmacistUser->markEmailAsVerified();
+
         $this->call([
             ProductSeeder::class,
             CashBoxSeeder::class,

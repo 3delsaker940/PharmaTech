@@ -419,5 +419,576 @@ class PurchaseInvoiceSeeder extends Seeder
                 ]);
             }
         }
+
+        // ══════════════════════════════════════════════════════════════════════
+        // BLOCK 6 — IMPORTED DATASET PRODUCTS (barcodes 19-31)
+        // Multiple batches per product across both suppliers, covering:
+        // regular stock, near-expiry, low-stock, dead-stock, and price history.
+        // ══════════════════════════════════════════════════════════════════════
+
+        $antitussive = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Anti-Tussive Hama Pharma')->first();
+        $unadol      = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Unadol FORTE')->first();
+        $spasmaver   = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Spasmaver')->first();
+        $brufen      = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Uni Brufen 400mg')->first();
+        $brandexP    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Brandex-P')->first();
+        $losartic    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Losartic')->first();
+        $panthenol   = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Panthenol Rama')->first();
+        $fucine      = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Fucine Dermic Ointment')->first();
+        $toularynx   = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Toularynx Thym')->first();
+        $bonacare    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'New Bonacare')->first();
+        $osteodam    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'Osteodam Plus K2')->first();
+        $noflu       = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'NoFlu Day And Night')->first();
+        $oneAsian    = Product::where('pharmacy_id', $pharmacy->id)->where('brand_name', 'One-Asian 1')->first();
+
+        // ── 19: Anti-Tussive — main stock (supplierA) + top-up (supplierB) ─────
+        if ($antitussive) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(25)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 6500 * 80,
+                'notes'          => 'Seeded — Anti-Tussive main stock',
+                'items'          => [
+                    [
+                        'product_id'      => $antitussive->id,
+                        'quantity'        => 80,
+                        'wholesale_price' => 6500,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => 'TU-35',
+                        'expiry_date'     => $today->copy()->addYears(2)->toDateString(),
+                        'selling_price'   => 9000,
+                    ],
+                ],
+            ]);
+
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(6)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 6650 * 40,
+                'notes'          => 'Seeded — Anti-Tussive restock, second batch',
+                'items'          => [
+                    [
+                        'product_id'      => $antitussive->id,
+                        'quantity'        => 40,
+                        'wholesale_price' => 6650,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => 'TU-41',
+                        'expiry_date'     => $today->copy()->addYears(2)->addMonths(6)->toDateString(),
+                        'selling_price'   => 9000,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 20: Unadol FORTE — fresh main batch + a near-expiry top-up batch ───
+        if ($unadol) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(18)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 3500 * 150,
+                'notes'          => 'Seeded — Unadol FORTE main stock',
+                'items'          => [
+                    [
+                        'product_id'      => $unadol->id,
+                        'quantity'        => 150,
+                        'wholesale_price' => 3500,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '26-UNFT-2',
+                        'expiry_date'     => $today->copy()->addYears(3)->toDateString(),
+                        'selling_price'   => 5000,
+                    ],
+                ],
+            ]);
+
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(3)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 3600 * 25,
+                'notes'          => 'Seeded — Unadol FORTE near-expiry top-up batch',
+                'items'          => [
+                    [
+                        'product_id'      => $unadol->id,
+                        'quantity'        => 25,
+                        'wholesale_price' => 3600,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '26-UNFT-5',
+                        'expiry_date'     => $today->copy()->addDays(35)->toDateString(),
+                        'selling_price'   => 5000,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 21: Spasmaver — dead stock: old purchase, never sold ───────────────
+        if ($spasmaver) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subMonths(8)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 9000 * 20,
+                'notes'          => 'Seeded — Spasmaver old purchase, never sold (dead stock)',
+                'items'          => [
+                    [
+                        'product_id'      => $spasmaver->id,
+                        'quantity'        => 20,
+                        'wholesale_price' => 9000,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => 'T-8420',
+                        'expiry_date'     => $today->copy()->addMonths(4)->toDateString(),
+                        'selling_price'   => 12500,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 22: Uni Brufen — high-volume regular stock across 2 batches ────────
+        if ($brufen) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(15)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 5000 * 250,
+                'notes'          => 'Seeded — Uni Brufen main stock',
+                'items'          => [
+                    [
+                        'product_id'      => $brufen->id,
+                        'quantity'        => 250,
+                        'wholesale_price' => 5000,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '25-UB4T-2',
+                        'expiry_date'     => $today->copy()->addYears(2)->addMonths(6)->toDateString(),
+                        'selling_price'   => 7000,
+                    ],
+                ],
+            ]);
+
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(4)->toDateString(),
+                'payment_method' => 'debt',
+                'amount_paid'    => 4900 * 50,
+                'notes'          => 'Seeded — Uni Brufen restock, partial debt',
+                'items'          => [
+                    [
+                        'product_id'      => $brufen->id,
+                        'quantity'        => 100,
+                        'wholesale_price' => 4900,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '25-UB4T-6',
+                        'expiry_date'     => $today->copy()->addYears(2)->toDateString(),
+                        'selling_price'   => 7000,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 23: Brandex-P — low-stock scenario (tiny quantity, min_stock=10) ───
+        if ($brandexP) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(22)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 11000 * 3,
+                'notes'          => 'Seeded — Brandex-P intentionally tiny quantity for low-stock scenario',
+                'items'          => [
+                    [
+                        'product_id'      => $brandexP->id,
+                        'quantity'        => 3,
+                        'wholesale_price' => 11000,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '6115',
+                        'expiry_date'     => $today->copy()->addMonths(10)->toDateString(),
+                        'selling_price'   => 15500,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 24: Losartic — regular stock + supplier price history (2 batches) ──
+        if ($losartic) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(10)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 16000 * 90,
+                'notes'          => 'Seeded — Losartic main stock',
+                'items'          => [
+                    [
+                        'product_id'      => $losartic->id,
+                        'quantity'        => 90,
+                        'wholesale_price' => 16000,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => 'T-8974',
+                        'expiry_date'     => $today->copy()->addYears(3)->toDateString(),
+                        'selling_price'   => 21000,
+                    ],
+                ],
+            ]);
+
+            $losarticPricesA = [15500, 15700, 15900];
+            for ($i = 1; $i <= 3; $i++) {
+                $service->store($pharmacy, $owner, [
+                    'supplier_id'    => $supplierA->id,
+                    'invoice_date'   => $today->copy()->subMonths($i + 1)->toDateString(),
+                    'payment_method' => 'cash',
+                    'amount_paid'    => $losarticPricesA[$i - 1] * 10,
+                    'notes'          => "Seeded — supplierA Losartic history month -{$i}",
+                    'items'          => [
+                        [
+                            'product_id'      => $losartic->id,
+                            'quantity'        => 10,
+                            'wholesale_price' => $losarticPricesA[$i - 1],
+                            'tax'             => 0,
+                            'discount'        => 0,
+                            'batch_number'    => "T-LA-{$i}",
+                            'expiry_date'     => $today->copy()->addYears(2)->toDateString(),
+                            'selling_price'   => 21000,
+                        ],
+                    ],
+                ]);
+            }
+
+            $losarticPricesB = [15200, 15300];
+            for ($i = 1; $i <= 2; $i++) {
+                $service->store($pharmacy, $owner, [
+                    'supplier_id'    => $supplierB->id,
+                    'invoice_date'   => $today->copy()->subMonths($i + 2)->subDays(6)->toDateString(),
+                    'payment_method' => 'cash',
+                    'amount_paid'    => $losarticPricesB[$i - 1] * 10,
+                    'notes'          => "Seeded — supplierB Losartic history month -{$i}",
+                    'items'          => [
+                        [
+                            'product_id'      => $losartic->id,
+                            'quantity'        => 10,
+                            'wholesale_price' => $losarticPricesB[$i - 1],
+                            'tax'             => 0,
+                            'discount'        => 0,
+                            'batch_number'    => "T-LB-{$i}",
+                            'expiry_date'     => $today->copy()->addYears(2)->toDateString(),
+                            'selling_price'   => 21000,
+                        ],
+                    ],
+                ]);
+            }
+        }
+
+        // ── 25: Panthenol Rama — near-expiry (critical, ~15 days) + older batch ─
+        if ($panthenol) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(30)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 4500 * 40,
+                'notes'          => 'Seeded — Panthenol Rama earlier batch',
+                'items'          => [
+                    [
+                        'product_id'      => $panthenol->id,
+                        'quantity'        => 40,
+                        'wholesale_price' => 4500,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '049',
+                        'expiry_date'     => $today->copy()->addMonths(8)->toDateString(),
+                        'selling_price'   => 6500,
+                    ],
+                ],
+            ]);
+
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(3)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 4600 * 15,
+                'notes'          => 'Seeded — Panthenol Rama near-expiry batch (15 days)',
+                'items'          => [
+                    [
+                        'product_id'      => $panthenol->id,
+                        'quantity'        => 15,
+                        'wholesale_price' => 4600,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '055',
+                        'expiry_date'     => $today->copy()->addDays(15)->toDateString(),
+                        'selling_price'   => 6500,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 26: Fucine — regular stock, two batches ─────────────────────────────
+        if ($fucine) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(14)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 9500 * 60,
+                'notes'          => 'Seeded — Fucine Dermic Ointment main stock',
+                'items'          => [
+                    [
+                        'product_id'      => $fucine->id,
+                        'quantity'        => 60,
+                        'wholesale_price' => 9500,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '41229',
+                        'expiry_date'     => $today->copy()->addYears(2)->addMonths(8)->toDateString(),
+                        'selling_price'   => 13500,
+                    ],
+                ],
+            ]);
+
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(5)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 9700 * 20,
+                'notes'          => 'Seeded — Fucine restock',
+                'items'          => [
+                    [
+                        'product_id'      => $fucine->id,
+                        'quantity'        => 20,
+                        'wholesale_price' => 9700,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '41305',
+                        'expiry_date'     => $today->copy()->addYears(3)->toDateString(),
+                        'selling_price'   => 13500,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 27: Toularynx Thym — critical near-expiry (7 days) + fresh batch ────
+        if ($toularynx) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(1)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 4000 * 12,
+                'notes'          => 'Seeded — Toularynx Thym critical near-expiry batch (7 days)',
+                'items'          => [
+                    [
+                        'product_id'      => $toularynx->id,
+                        'quantity'        => 12,
+                        'wholesale_price' => 4000,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '54231',
+                        'expiry_date'     => $today->copy()->addDays(7)->toDateString(),
+                        'selling_price'   => 6000,
+                    ],
+                ],
+            ]);
+
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(20)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 4100 * 30,
+                'notes'          => 'Seeded — Toularynx Thym fresh restock batch',
+                'items'          => [
+                    [
+                        'product_id'      => $toularynx->id,
+                        'quantity'        => 30,
+                        'wholesale_price' => 4100,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '54290',
+                        'expiry_date'     => $today->copy()->addYears(2)->toDateString(),
+                        'selling_price'   => 6000,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 28: New Bonacare — regular stock ────────────────────────────────────
+        if ($bonacare) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(9)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 14000 * 70,
+                'notes'          => 'Seeded — New Bonacare main stock',
+                'items'          => [
+                    [
+                        'product_id'      => $bonacare->id,
+                        'quantity'        => 70,
+                        'wholesale_price' => 14000,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => 'F9P',
+                        'expiry_date'     => $today->copy()->addYears(3)->toDateString(),
+                        'selling_price'   => 19000,
+                    ],
+                ],
+            ]);
+
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(2)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 14200 * 25,
+                'notes'          => 'Seeded — New Bonacare restock',
+                'items'          => [
+                    [
+                        'product_id'      => $bonacare->id,
+                        'quantity'        => 25,
+                        'wholesale_price' => 14200,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => 'F9T',
+                        'expiry_date'     => $today->copy()->addYears(3)->toDateString(),
+                        'selling_price'   => 19000,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 29: Osteodam Plus K2 — main stock + rich supplier price history ────
+        if ($osteodam) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(11)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 17000 * 60,
+                'notes'          => 'Seeded — Osteodam Plus K2 main stock',
+                'items'          => [
+                    [
+                        'product_id'      => $osteodam->id,
+                        'quantity'        => 60,
+                        'wholesale_price' => 17000,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '9509',
+                        'expiry_date'     => $today->copy()->addYears(3)->toDateString(),
+                        'selling_price'   => 23000,
+                    ],
+                ],
+            ]);
+
+            $osteodamPricesA = [16500, 16700, 16900, 17100];
+            for ($i = 1; $i <= 4; $i++) {
+                $service->store($pharmacy, $owner, [
+                    'supplier_id'    => $supplierA->id,
+                    'invoice_date'   => $today->copy()->subMonths($i)->toDateString(),
+                    'payment_method' => 'cash',
+                    'amount_paid'    => $osteodamPricesA[$i - 1] * 8,
+                    'notes'          => "Seeded — supplierA Osteodam history month -{$i}",
+                    'items'          => [
+                        [
+                            'product_id'      => $osteodam->id,
+                            'quantity'        => 8,
+                            'wholesale_price' => $osteodamPricesA[$i - 1],
+                            'tax'             => 0,
+                            'discount'        => 0,
+                            'batch_number'    => "9509-A{$i}",
+                            'expiry_date'     => $today->copy()->addYears(2)->toDateString(),
+                            'selling_price'   => 23000,
+                        ],
+                    ],
+                ]);
+            }
+
+            $osteodamPricesB = [16200, 16350, 16500];
+            for ($i = 1; $i <= 3; $i++) {
+                $service->store($pharmacy, $owner, [
+                    'supplier_id'    => $supplierB->id,
+                    'invoice_date'   => $today->copy()->subMonths($i)->subDays(12)->toDateString(),
+                    'payment_method' => 'cash',
+                    'amount_paid'    => $osteodamPricesB[$i - 1] * 8,
+                    'notes'          => "Seeded — supplierB Osteodam history month -{$i}",
+                    'items'          => [
+                        [
+                            'product_id'      => $osteodam->id,
+                            'quantity'        => 8,
+                            'wholesale_price' => $osteodamPricesB[$i - 1],
+                            'tax'             => 0,
+                            'discount'        => 0,
+                            'batch_number'    => "9509-B{$i}",
+                            'expiry_date'     => $today->copy()->addYears(2)->toDateString(),
+                            'selling_price'   => 23000,
+                        ],
+                    ],
+                ]);
+            }
+        }
+
+        // ── 30: NoFlu Day And Night — seasonal restock, two batches ─────────────
+        if ($noflu) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(17)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 7500 * 90,
+                'notes'          => 'Seeded — NoFlu Day And Night main stock',
+                'items'          => [
+                    [
+                        'product_id'      => $noflu->id,
+                        'quantity'        => 90,
+                        'wholesale_price' => 7500,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '148',
+                        'expiry_date'     => $today->copy()->addYears(2)->addMonths(6)->toDateString(),
+                        'selling_price'   => 10500,
+                    ],
+                ],
+            ]);
+
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierB->id,
+                'invoice_date'   => $today->copy()->subDays(1)->toDateString(),
+                'payment_method' => 'debt',
+                'amount_paid'    => 0,
+                'notes'          => 'Seeded — NoFlu restock, on debt',
+                'items'          => [
+                    [
+                        'product_id'      => $noflu->id,
+                        'quantity'        => 40,
+                        'wholesale_price' => 7600,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '162',
+                        'expiry_date'     => $today->copy()->addYears(2)->toDateString(),
+                        'selling_price'   => 10500,
+                    ],
+                ],
+            ]);
+        }
+
+        // ── 31: One-Asian 1 — critical low-stock scenario ───────────────────────
+        if ($oneAsian) {
+            $service->store($pharmacy, $owner, [
+                'supplier_id'    => $supplierA->id,
+                'invoice_date'   => $today->copy()->subDays(28)->toDateString(),
+                'payment_method' => 'cash',
+                'amount_paid'    => 13000 * 3,
+                'notes'          => 'Seeded — One-Asian 1 intentionally tiny quantity for low-stock scenario',
+                'items'          => [
+                    [
+                        'product_id'      => $oneAsian->id,
+                        'quantity'        => 3,
+                        'wholesale_price' => 13000,
+                        'tax'             => 0,
+                        'discount'        => 0,
+                        'batch_number'    => '64010',
+                        'expiry_date'     => $today->copy()->addYears(1)->toDateString(),
+                        'selling_price'   => 18000,
+                    ],
+                ],
+            ]);
+        }
     }
 }

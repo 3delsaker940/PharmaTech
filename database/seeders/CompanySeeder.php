@@ -17,6 +17,10 @@ class CompanySeeder extends Seeder
             ['name' => 'Syrian Pharma', 'address' => 'Damascus, Syria'],
             ['name' => 'Sama Pharma', 'address' => 'Damascus, Syria'],
             ['name' => 'Cham Pharma', 'address' => 'Damascus, Syria'],
+            ['name' => 'Hama Pharma', 'address' => 'Hama, Syria'],
+            ['name' => 'Averroes Pharma', 'address' => 'Aleppo, Syria'],
+            ['name' => 'Unipharma', 'address' => 'Homs, Syria'],
+            ['name' => 'Barakat Pharma', 'address' => 'Latakia, Syria'],
         ];
         foreach ($companies as $company) {
             Company::firstOrCreate(['name' => $company['name']], $company);

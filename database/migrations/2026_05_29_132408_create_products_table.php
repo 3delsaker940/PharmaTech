@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('base_unit_id')->nullable()->constrained('units')->nullOnDelete();
             $table->foreignId('selling_unit_id')->nullable()->constrained('units')->nullOnDelete();
-            $table->string('barcode');
+            $table->string('barcode')->unique();
             $table->string('brand_name');
             $table->string('scientific_name')->nullable();
             $table->string('strength')->nullable();
