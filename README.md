@@ -1,58 +1,132 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PharmaTech Engine — Advanced Pharmacy Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+**Enterprise-grade backend system for pharmacy and inventory management**, built on a Multi-Tenant architecture (Tenant-per-Pharmacy) with robust data isolation, encrypted data handling, and automated background jobs.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Table of Contents
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Local Development Setup](#local-development-setup)
+- [Roadmap](#roadmap)
+- [License](#license)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Overview
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+PharmaTech Engine is a production-grade backend platform designed to power pharmacy operations at enterprise scale. It combines strict multi-tenant data isolation, encrypted-at-rest sensitive data with non-reversible lookup hashes for efficient querying, and a suite of automated background jobs that keep inventory, finances, and notifications running without manual intervention.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+The system is built for reliability and auditability first — financial transactions, debt tracking, and inventory movements are all first-class citizens of the domain model, not afterthoughts bolted onto a generic CRUD system.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
+## Tech Stack
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+| Layer                   | Technology                                                |
+|--------------------------|------------------------------------------------------------|
+| Backend Framework         | PHP 8.5, Laravel 12                                         |
+| Admin Panel               | Filament PHP                                                |
+| Database                  | MySQL — Encrypted Casts & non-reversible Lookup Hashes       |
+| Authorization              | Spatie Permission (RBAC)                                      |
+| Queue & Background Jobs    | Redis & Laravel Queues                                          |
+| Push Notifications         | Firebase Cloud Messaging (FCM)                                  |
+| Environment / Tooling      | Docker & Laravel Sail                                            |
 
+---
+
+## Key Features
+
+### 🏥 Multi-Tenant Isolation
+Strict pharmacy tenant boundaries are enforced via a custom `ResolvePharmacy` middleware combined with dedicated authorization policies, ensuring no cross-tenant data leakage at the application or query layer.
+
+### 🔐 Encrypted, Query-Safe Sensitive Data
+Sensitive fields are stored using Laravel encrypted casts, paired with non-reversible lookup hashes — enabling fast, indexed lookups (e.g., searching by phone number or email) without ever decrypting data server-side for querying.
+
+### 📦 Smart FEFO Inventory Protocol
+First-Expiry, First-Out stock rotation is enforced at the batch level, minimizing waste and ensuring near-expiry inventory is dispensed before fresher stock.
+
+### 💰 Financial & Credit Tracking
+Full cash box management, customer and supplier debt ledgers, and installment payment tracking — giving pharmacy owners complete visibility into receivables, payables, and daily cash flow.
+
+### ⏱ Automated Task Scheduling
+Cron-driven jobs run with `withoutOverlapping()` protection to safely handle:
+- Daily expiration checks
+- Overdue debt monitoring
+- Notification dispatch
+- Weather-driven stock demand forecasting
+
+### 🤖 AI & External Integrations
+- **LLM API integration** for interaction analysis
+- **Weather API integration** feeding demand forecasting models
+
+### 🔑 Role-Based Access Control
+Authorization is fully managed through Spatie Permission, supporting granular roles and permissions across pharmacy staff.
+
+---
+
+## Architecture
+
+PharmaTech Engine follows a **Tenant-per-Pharmacy Multi-Tenant** model — each execution domain is scoped to a specific pharmacy's data context, with tenant resolution handled transparently at the middleware layer (`ResolvePharmacy`). This keeps authorization logic centralized and auditable while allowing the application to scale efficiently without data cross-contamination.
+
+Background processing (notifications, forecasting, scheduled checks) is decoupled from the request/response cycle via Redis-backed Laravel Queues, ensuring the application remains responsive under load.
+
+---
+
+## Local Development Setup
+
+This project uses **Docker** and **Laravel Sail** for a fully containerized local development environment.
+
+### Prerequisites
+- Docker Engine & Docker Compose
+
+### Setup Steps
+
+**1. Clone the repository**
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/3delsaker940/PharmaTech.git
+cd PharmaTech
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+**2. Environment & Dependencies Setup**
+```bash
+cp .env.example .env
 
-## Contributing
+# Install dependencies using a temporary Docker container (if PHP/Composer is not installed locally)
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$(pwd):/var/www/html" \
+    -w /var/www/html \
+    laravelsail/php84-composer:latest \
+    composer install --ignore-platform-reqs
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**3. Start containers**
+```bash
+./vendor/bin/sail up -d
+```
 
-## Code of Conduct
+**4. Generate application key and build the database**
+```bash
+./vendor/bin/sail artisan key:generate
+./vendor/bin/sail artisan migrate --seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Your local instance should now be up and running, with a fully seeded database ready for development.
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Roadmap
+
+- [ ] **Rule-Based Engine** — Prolog-like inference engine for offline drug interaction checks
+- [ ] **Native PDF Export** — Invoice & statement generation via `laravel-dompdf`
+- [ ] **Offline-First Sync Resilience** — Robust database synchronization for intermittent connectivity environments
+
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is proprietary software. All rights reserved unless otherwise stated.
